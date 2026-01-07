@@ -9,8 +9,7 @@ import {
   Stethoscope, 
   TrendingUp, 
   TrendingDown,
-  Activity,
-  HeartPulse
+  Activity
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -107,13 +106,20 @@ export const Overview = () => {
     let pending = 0, collected = 0, thisMonth = 0, newRev = 0;
     const now = new Date();
     clients.forEach(c => {
-      (c.billing?.installments || []).forEach(ins => {
+      const installments = c.billing?.installments || [];
+      installments.forEach(ins => {
         if (ins.isPaid) {
           collected += ins.amount;
-          if (ins.paidAt && new Date(ins.paidAt).getMonth() === now.getMonth()) thisMonth += ins.amount;
-        } else pending += ins.amount;
+          if (ins.paidAt && new Date(ins.paidAt).getMonth() === now.getMonth()) {
+            thisMonth += ins.amount;
+          }
+        } else {
+          pending += ins.amount;
+        }
       });
-      if (new Date(c.createdAt).getMonth() === now.getMonth()) newRev += c.billing?.totalMentorshipValue || 0;
+      if (new Date(c.createdAt).getMonth() === now.getMonth()) {
+        newRev += (c.billing?.totalMentorshipValue || 0);
+      }
     });
     return { pending, collected, thisMonth, newRev };
   };
@@ -171,7 +177,8 @@ export const Overview = () => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {clients.map(client => {
-                const metrics = metricsMap[client.id];
+                const metrics = metricsMap[client.id] || { loading: false };
+                const salesLast24h = metrics.salesLast24h || 0;
                 return (
                   <tr key={client.id} className="hover:bg-gray-50/50 transition-colors group font-['Montserrat']">
                     <td className="px-10 py-8">
@@ -181,24 +188,24 @@ export const Overview = () => {
                        </span>
                     </td>
                     <td className="px-6 py-8">
-                       {metrics?.loading ? <div className="w-20 h-4 bg-gray-100 animate-pulse rounded"></div> : (
+                       {metrics.loading ? <div className="w-20 h-4 bg-gray-100 animate-pulse rounded"></div> : (
                          <span className="font-black text-gray-900 text-lg">
-                           {metrics?.revenue !== undefined ? `$${metrics.revenue.toLocaleString()}` : '---'}
+                           {metrics.revenue !== undefined ? `$${metrics.revenue.toLocaleString()}` : '---'}
                          </span>
                        )}
                     </td>
                     <td className="px-6 py-8">
-                       {metrics?.loading ? <div className="w-10 h-4 bg-gray-100 animate-pulse rounded"></div> : (
+                       {metrics.loading ? <div className="w-10 h-4 bg-gray-100 animate-pulse rounded"></div> : (
                          <span className="font-black text-indigo-600 text-lg">
-                           {metrics?.roas !== undefined ? `${metrics.roas.toFixed(2)}x` : '---'}
+                           {metrics.roas !== undefined ? `${metrics.roas.toFixed(2)}x` : '---'}
                          </span>
                        )}
                     </td>
                     <td className="px-6 py-8 text-center">
-                       {metrics?.loading ? <div className="w-6 h-6 bg-gray-100 animate-pulse rounded-full mx-auto"></div> : (
+                       {metrics.loading ? <div className="w-6 h-6 bg-gray-100 animate-pulse rounded-full mx-auto"></div> : (
                          <div className="flex flex-col items-center">
-                            <div className={`w-3 h-3 rounded-full ${(metrics?.salesLast24h || 0) > 0 ? 'bg-green-500 animate-pulse shadow-lg shadow-green-200' : 'bg-gray-200'}`}></div>
-                            <span className="text-[10px] font-black mt-1">{metrics?.salesLast24h || 0} vtas</span>
+                            <div className={`w-3 h-3 rounded-full ${salesLast24h > 0 ? 'bg-green-500 animate-pulse shadow-lg shadow-green-200' : 'bg-gray-200'}`}></div>
+                            <span className="text-[10px] font-black mt-1">{salesLast24h} vtas</span>
                          </div>
                        )}
                     </td>

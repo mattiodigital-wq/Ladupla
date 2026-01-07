@@ -40,17 +40,17 @@ const ClientDashboard: React.FC = () => {
     let formatted = url.trim();
     
     // 1. Limpiar cualquier parámetro previo que pueda corromper la URL
-    if (formatted.includes('?')) {
+    if (formatted.indexOf('?') !== -1) {
         formatted = formatted.split('?')[0];
     }
 
     // 2. Convertir a modo embebido si es una URL estándar
-    if (formatted.includes('/reporting/') && !formatted.includes('/embed/reporting/')) {
+    if (formatted.indexOf('/reporting/') !== -1 && formatted.indexOf('/embed/reporting/') === -1) {
       formatted = formatted.replace('/reporting/', '/embed/reporting/');
     }
     
     // 3. Eliminar modos de edición
-    if (formatted.includes('/edit')) {
+    if (formatted.indexOf('/edit') !== -1) {
       formatted = formatted.split('/edit')[0];
     }
 
@@ -142,7 +142,7 @@ const ClientDashboard: React.FC = () => {
         <div className="mt-6">
            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
            <h3 className="text-3xl font-black text-gray-900 tracking-tighter italic">
-             {label.includes('ROAS') ? `${value.toFixed(2)}x` : `$${value.toLocaleString()}`}
+             {label.indexOf('ROAS') !== -1 ? `${value.toFixed(2)}x` : `$${value.toLocaleString()}`}
            </h3>
         </div>
       </div>

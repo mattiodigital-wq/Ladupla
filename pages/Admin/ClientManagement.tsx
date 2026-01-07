@@ -1,13 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../../services/db';
-import { Client, ReportSection, AuditSession, AuditTask, TaskUrgency, TaskCategory, BillingData, Installment } from '../../types';
+import { Client, ReportSection, AuditSession, AuditTask, TaskUrgency, TaskCategory, Installment } from '../../types';
 import { SECTIONS } from '../../constants';
 import { 
   Plus, Edit2, Trash2, X, ArrowLeft, Zap, 
-  Video, Search, StickyNote, Layout,
-  DollarSign, Lock, Unlock, CreditCard, ShieldCheck, Link as LinkIcon,
-  Info, AlertCircle, ExternalLink
+  Video, Search, DollarSign, Lock, Unlock, CreditCard, ShieldCheck,
+  Info
 } from 'lucide-react';
 
 const CATEGORIES: {id: TaskCategory, label: string}[] = [
@@ -38,25 +37,27 @@ const ClientManagement: React.FC = () => {
   const [formData, setFormData] = useState<Partial<Client>>({
     name: '',
     isActive: true,
-    reportUrls: Object.fromEntries(SECTIONS.map(s => [s.id, ''])) as any,
+    reportUrls: Object.fromEntries(SECTIONS.map(s => [s.id, ''])) as Record<ReportSection, string>,
     billing: { totalMentorshipValue: 0, installments: [] }
   });
 
   useEffect(() => {
-    if (managingSessionsFor) setSessions(db.getSessions(managingSessionsFor.id));
+    if (managingSessionsFor) {
+      setSessions(db.getSessions(managingSessionsFor.id));
+    }
   }, [managingSessionsFor]);
 
-  const handleOpenModal = (client?: Client) => {
+  const handleOpenModal = (clientToEdit?: Client) => {
     setModalTab('info');
-    if (client) { 
-        setEditingClient(client); 
-        setFormData({ ...client }); 
+    if (clientToEdit) { 
+        setEditingClient(clientToEdit); 
+        setFormData({ ...clientToEdit }); 
     } else { 
         setEditingClient(null); 
         setFormData({ 
           name: '', 
           isActive: true,
-          reportUrls: Object.fromEntries(SECTIONS.map(s => [s.id, ''])) as any,
+          reportUrls: Object.fromEntries(SECTIONS.map(s => [s.id, ''])) as Record<ReportSection, string>,
           billing: { totalMentorshipValue: 0, installments: [] }
         }); 
     }
@@ -64,10 +65,10 @@ const ClientManagement: React.FC = () => {
   };
 
   const generateInstallments = (total: number, count: number) => {
-    const installments: Installment[] = [];
+    const newInstallments: Installment[] = [];
     const amt = Math.floor(total / count);
     for (let i = 1; i <= count; i++) {
-      installments.push({
+      newInstallments.push({
         id: Math.random().toString(36).substr(2, 5),
         number: i,
         amount: amt,
@@ -78,7 +79,7 @@ const ClientManagement: React.FC = () => {
       ...formData,
       billing: {
         totalMentorshipValue: total,
-        installments
+        installments: newInstallments
       }
     });
   };
@@ -86,16 +87,14 @@ const ClientManagement: React.FC = () => {
   const handleSave = () => {
     if (!formData.name) return;
     
-    // ATÓMICO: Obtener la versión más reciente del cliente de la DB antes de guardar
     const allClients = db.getClients();
     const latestClient = allClients.find(c => c.id === editingClient?.id);
 
     const clientToSave: Client = {
-      ...latestClient, // Preservamos aiConfig, costingData, etc.
-      ...formData,      // Aplicamos cambios del formulario
+      ...(latestClient || {}),
+      ...formData,
       id: editingClient?.id || Math.random().toString(36).substr(2, 9),
       name: formData.name!,
-      // Aseguramos que reportUrls se mezcle correctamente si hubo cambios parciales
       reportUrls: {
         ...(latestClient?.reportUrls || {}),
         ...(formData.reportUrls || {})
@@ -115,7 +114,7 @@ const ClientManagement: React.FC = () => {
       id: editingSession?.id || Math.random().toString(36).substr(2, 9),
       clientId: managingSessionsFor.id,
       title: sessionForm.title || '',
-      type: sessionForm.type || 'meet',
+      type: (sessionForm.type as 'meet' | 'virtual') || 'meet',
       date: editingSession?.date || new Date().toISOString(),
       summary: sessionForm.summary || '',
       tasks: (sessionForm.tasks || []) as AuditTask[],
@@ -139,6 +138,18 @@ const ClientManagement: React.FC = () => {
       createdAt: new Date().toISOString()
     };
     setSessionForm({ ...sessionForm, tasks: [newTask, ...(sessionForm.tasks || [])] });
+  };
+
+  const toggleInstallmentPaid = (index: number) => {
+    if (!formData.billing) return;
+    const newIns = [...(formData.billing.installments || [])];
+    const item = newIns[index];
+    item.isPaid = !item.isPaid;
+    item.paidAt = item.isPaid ? new Date().toISOString() : undefined;
+    setFormData({
+      ...formData,
+      billing: { ...formData.billing, installments: newIns }
+    });
   };
 
   return (
@@ -244,7 +255,6 @@ const ClientManagement: React.FC = () => {
                     <input type="text" className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black uppercase tracking-tighter text-lg" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Ej: Nike Argentina" />
                   </div>
                   
-                  {/* AYUDA TÉCNICA LOOKER */}
                   <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 flex gap-4">
                      <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-lg">
                         <Info size={20} />
@@ -252,7 +262,7 @@ const ClientManagement: React.FC = () => {
                      <div className="space-y-1">
                         <p className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">¿Cómo evitar el error de conexión?</p>
                         <p className="text-xs text-indigo-700 leading-relaxed">
-                          En Looker Studio, ve a <b>Archivo > Insertar informe</b>. Asegúrate de que <b>"Habilitar inserción"</b> esté marcado. Copia esa URL o pega el enlace estándar de visualización aquí; el portal lo convertirá automáticamente.
+                          En Looker Studio, ve a <b>Archivo > Insertar informe</b>. Asegúrate de que <b>Habilitar inserción</b> esté marcado. Copia esa URL o pega el enlace estándar de visualización aquí; el portal lo convertirá automáticamente.
                         </p>
                      </div>
                   </div>
@@ -333,19 +343,14 @@ const ClientManagement: React.FC = () => {
 
                     <div className="bg-gray-50 rounded-[2.5rem] p-6 space-y-3 max-h-[300px] overflow-y-auto no-scrollbar border border-gray-100">
                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Estado de Cuotas</p>
-                       {formData.billing?.installments?.map((ins, i) => (
+                       {(formData.billing?.installments || []).map((ins, i) => (
                          <div key={ins.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100">
                             <div className="flex items-center gap-4">
                                <span className="font-black text-gray-300">#{ins.number}</span>
                                <span className="font-black text-gray-900">${ins.amount.toLocaleString()}</span>
                             </div>
                             <button 
-                              onClick={() => {
-                                const newIns = [...(formData.billing?.installments || [])];
-                                newIns[i].isPaid = !newIns[i].isPaid;
-                                newIns[i].paidAt = newIns[i].isPaid ? new Date().toISOString() : undefined;
-                                setFormData({...formData, billing: { ...formData.billing!, installments: newIns }});
-                              }}
+                              onClick={() => toggleInstallmentPaid(i)}
                               className={`px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${ins.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600'}`}
                             >
                                {ins.isPaid ? 'Pagada' : 'Pendiente'}
@@ -416,7 +421,7 @@ const ClientManagement: React.FC = () => {
                          </div>
 
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {sessionForm.tasks?.map((task, idx) => (
+                            {(sessionForm.tasks || []).map((task, idx) => (
                               <div key={idx} className="bg-white p-8 rounded-[3rem] border-2 border-gray-100 space-y-6 shadow-sm relative group">
                                  <button 
                                    onClick={() => {
@@ -429,18 +434,18 @@ const ClientManagement: React.FC = () => {
                                    <Trash2 size={18} />
                                  </button>
                                  <div className="space-y-6">
-                                    <input type="text" className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black" value={task.title} onChange={e => { const nt = [...(sessionForm.tasks || [])]; (nt[idx] as any).title = e.target.value; setSessionForm({...sessionForm, tasks: nt}); }} placeholder="Título de la tarea" />
+                                    <input type="text" className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black" value={task.title} onChange={e => { const nt = [...(sessionForm.tasks || [])]; nt[idx].title = e.target.value; setSessionForm({...sessionForm, tasks: nt}); }} placeholder="Título de la tarea" />
                                     <div className="grid grid-cols-2 gap-4">
-                                       <select className="w-full bg-gray-50 rounded-xl p-3 text-[10px] font-black" value={task.urgency} onChange={e => { const nt = [...(sessionForm.tasks || [])]; (nt[idx] as any).urgency = e.target.value as TaskUrgency; setSessionForm({...sessionForm, tasks: nt}); }}>
+                                       <select className="w-full bg-gray-50 rounded-xl p-3 text-[10px] font-black" value={task.urgency} onChange={e => { const nt = [...(sessionForm.tasks || [])]; nt[idx].urgency = e.target.value as TaskUrgency; setSessionForm({...sessionForm, tasks: nt}); }}>
                                           <option value="urgent">🔴 URGENTE</option>
                                           <option value="attention">🟡 ATENCIÓN</option>
                                           <option value="weekly">🟢 SEMANAL</option>
                                        </select>
-                                       <select className="w-full bg-gray-50 rounded-xl p-3 text-[10px] font-black" value={task.category} onChange={e => { const nt = [...(sessionForm.tasks || [])]; (nt[idx] as any).category = e.target.value as TaskCategory; setSessionForm({...sessionForm, tasks: nt}); }}>
-                                          {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                                       <select className="w-full bg-gray-50 rounded-xl p-3 text-[10px] font-black" value={task.category} onChange={e => { const nt = [...(sessionForm.tasks || [])]; nt[idx].category = e.target.value as TaskCategory; setSessionForm({...sessionForm, tasks: nt}); }}>
+                                          {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
                                        </select>
                                     </div>
-                                    <textarea className="w-full bg-gray-50 border-none rounded-2xl p-4 min-h-[100px] resize-none" value={task.description} onChange={e => { const nt = [...(sessionForm.tasks || [])]; (nt[idx] as any).description = e.target.value; setSessionForm({...sessionForm, tasks: nt}); }} placeholder="Descripción" />
+                                    <textarea className="w-full bg-gray-50 border-none rounded-2xl p-4 min-h-[100px] resize-none" value={task.description} onChange={e => { const nt = [...(sessionForm.tasks || [])]; nt[idx].description = e.target.value; setSessionForm({...sessionForm, tasks: nt}); }} placeholder="Descripción" />
                                  </div>
                               </div>
                             ))}
