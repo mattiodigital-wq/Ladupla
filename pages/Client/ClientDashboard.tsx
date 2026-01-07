@@ -36,6 +36,20 @@ const ClientDashboard: React.FC = () => {
   } | null>(null);
   const [loadingMeta, setLoadingMeta] = useState(false);
 
+  const formatLookerUrl = (url: string) => {
+    if (!url) return '';
+    let formatted = url.trim();
+    // Si la URL es la estándar de visualización, la convertimos a embebido
+    if (formatted.includes('/reporting/') && !formatted.includes('/embed/reporting/')) {
+      formatted = formatted.replace('/reporting/', '/embed/reporting/');
+    }
+    // Aseguramos que no haya parámetros de edición que bloqueen el frame
+    if (formatted.includes('/edit')) {
+      formatted = formatted.split('/edit')[0];
+    }
+    return formatted;
+  };
+
   const fetchMetrics = useCallback(async (clientId: string) => {
     const freshClient = db.getClients().find(cl => cl.id === clientId);
     if (!freshClient?.aiConfig?.metaToken || !freshClient?.aiConfig?.metaAccountId) return;
@@ -169,7 +183,10 @@ const ClientDashboard: React.FC = () => {
           {SECTIONS.filter(s => !!client.reportUrls[s.id]).map((section) => (
             <button
               key={section.id}
-              onClick={() => setActiveSection(section.id)}
+              onClick={() => {
+                setActiveSection(section.id);
+                setIframeLoading(true);
+              }}
               className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-[11px] font-black uppercase transition-all whitespace-nowrap ${activeSection === section.id ? 'bg-red-600 text-white shadow-xl shadow-red-100' : 'text-gray-400 hover:text-gray-700'}`}
             >
               <section.icon size={14} /> {section.label}
@@ -181,10 +198,11 @@ const ClientDashboard: React.FC = () => {
       <div className="min-h-[850px] bg-white rounded-[4rem] border-4 border-gray-50 shadow-2xl overflow-hidden relative">
         {client.reportUrls[activeSection] ? (
           <iframe
-            src={client.reportUrls[activeSection].replace('/reporting/', '/embed/reporting/')}
+            src={formatLookerUrl(client.reportUrls[activeSection])}
             onLoad={() => setIframeLoading(false)}
             className="w-full h-full border-none"
             allowFullScreen
+            loading="lazy"
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center p-20 text-center opacity-30">
@@ -192,10 +210,10 @@ const ClientDashboard: React.FC = () => {
             <p className="font-black uppercase tracking-widest">Reporte no configurado</p>
           </div>
         )}
-        {iframeLoading && (
+        {iframeLoading && client.reportUrls[activeSection] && (
           <div className="absolute inset-0 bg-gray-50 flex flex-col items-center justify-center space-y-4">
              <Loader2 className="animate-spin text-red-600" size={48} />
-             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Consultando Looker Studio...</p>
+             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Invocando a Looker Studio...</p>
           </div>
         )}
       </div>
@@ -216,7 +234,7 @@ const ClientDashboard: React.FC = () => {
                    </div>
                 </div>
                 <div className="mt-6 pt-6 border-t border-gray-200 flex justify-between items-center">
-                   <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${task.urgency === 'urgent' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{task.urgency}</span>
+                   <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${task.urgency === 'urgent' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>{task.urgency}</span>
                    <Link to={`/session/${sessionId}`} className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Ver Protocolo <ArrowRight size={12} className="inline ml-1" /></Link>
                 </div>
              </div>

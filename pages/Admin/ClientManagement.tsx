@@ -6,7 +6,8 @@ import { SECTIONS } from '../../constants';
 import { 
   Plus, Edit2, Trash2, X, ArrowLeft, Zap, 
   Video, Search, StickyNote, Layout,
-  DollarSign, Lock, Unlock, CreditCard, ShieldCheck, Link as LinkIcon
+  DollarSign, Lock, Unlock, CreditCard, ShieldCheck, Link as LinkIcon,
+  Info, AlertCircle, ExternalLink
 } from 'lucide-react';
 
 const CATEGORIES: {id: TaskCategory, label: string}[] = [
@@ -242,6 +243,20 @@ const ClientManagement: React.FC = () => {
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Nombre de la Marca</label>
                     <input type="text" className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black uppercase tracking-tighter text-lg" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Ej: Nike Argentina" />
                   </div>
+                  
+                  {/* AYUDA TÉCNICA LOOKER */}
+                  <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 flex gap-4">
+                     <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-lg">
+                        <Info size={20} />
+                     </div>
+                     <div className="space-y-1">
+                        <p className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">¿Cómo evitar el error de conexión?</p>
+                        <p className="text-xs text-indigo-700 leading-relaxed">
+                          En Looker Studio, ve a <b>Archivo > Insertar informe</b>. Asegúrate de que <b>"Habilitar inserción"</b> esté marcado. Copia esa URL o pega el enlace estándar de visualización aquí; el portal lo convertirá automáticamente.
+                        </p>
+                     </div>
+                  </div>
+
                   <div className="space-y-4">
                     <p className="text-xs font-black text-red-600 uppercase tracking-widest border-b pb-2">Radiografías (Looker Studio)</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
