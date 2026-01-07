@@ -179,6 +179,8 @@ export const Overview = () => {
               {clients.map(client => {
                 const metrics = metricsMap[client.id] || { loading: false };
                 const salesLast24h = metrics.salesLast24h || 0;
+                const hasRecentSales = salesLast24h !== 0;
+                
                 return (
                   <tr key={client.id} className="hover:bg-gray-50/50 transition-colors group font-['Montserrat']">
                     <td className="px-10 py-8">
@@ -204,7 +206,7 @@ export const Overview = () => {
                     <td className="px-6 py-8 text-center">
                        {metrics.loading ? <div className="w-6 h-6 bg-gray-100 animate-pulse rounded-full mx-auto"></div> : (
                          <div className="flex flex-col items-center">
-                            <div className={`w-3 h-3 rounded-full ${salesLast24h > 0 ? 'bg-green-500 animate-pulse shadow-lg shadow-green-200' : 'bg-gray-200'}`}></div>
+                            <div className={`w-3 h-3 rounded-full ${hasRecentSales ? 'bg-green-500 animate-pulse shadow-lg shadow-green-200' : 'bg-gray-200'}`}></div>
                             <span className="text-[10px] font-black mt-1">{salesLast24h} vtas</span>
                          </div>
                        )}

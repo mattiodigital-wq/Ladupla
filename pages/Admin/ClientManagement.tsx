@@ -75,13 +75,13 @@ const ClientManagement: React.FC = () => {
         isPaid: false
       });
     }
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       billing: {
         totalMentorshipValue: total,
         installments: newInstallments
       }
-    });
+    }));
   };
 
   const handleSave = () => {
@@ -137,7 +137,7 @@ const ClientManagement: React.FC = () => {
       isCompleted: false,
       createdAt: new Date().toISOString()
     };
-    setSessionForm({ ...sessionForm, tasks: [newTask, ...(sessionForm.tasks || [])] });
+    setSessionForm(prev => ({ ...prev, tasks: [newTask, ...(prev.tasks || [])] }));
   };
 
   const toggleInstallmentPaid = (index: number) => {
@@ -146,10 +146,23 @@ const ClientManagement: React.FC = () => {
     const item = newIns[index];
     item.isPaid = !item.isPaid;
     item.paidAt = item.isPaid ? new Date().toISOString() : undefined;
-    setFormData({
-      ...formData,
-      billing: { ...formData.billing, installments: newIns }
-    });
+    setFormData(prev => ({
+      ...prev,
+      billing: prev.billing ? { ...prev.billing, installments: newIns } : undefined
+    }));
+  };
+
+  const handleTaskChange = (idx: number, field: keyof AuditTask, value: any) => {
+    const nt = [...(sessionForm.tasks || [])];
+    (nt[idx] as any)[field] = value;
+    setSessionForm(prev => ({ ...prev, tasks: nt }));
+  };
+
+  const handleReportUrlChange = (sectionId: ReportSection, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      reportUrls: { ...(prev.reportUrls as any), [sectionId]: value }
+    }));
   };
 
   return (
@@ -252,7 +265,7 @@ const ClientManagement: React.FC = () => {
                 <div className="space-y-8 animate-in fade-in duration-300">
                   <div>
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Nombre de la Marca</label>
-                    <input type="text" className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black uppercase tracking-tighter text-lg" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Ej: Nike Argentina" />
+                    <input type="text" className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black uppercase tracking-tighter text-lg" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Ej: Nike Argentina" />
                   </div>
                   
                   <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 flex gap-4">
@@ -277,7 +290,7 @@ const ClientManagement: React.FC = () => {
                               type="url" 
                               className="w-full bg-gray-50 border-none rounded-xl p-3 text-[11px] font-medium" 
                               value={formData.reportUrls?.[s.id] || ''} 
-                              onChange={e => setFormData({...formData, reportUrls: {...(formData.reportUrls as any), [s.id]: e.target.value}})} 
+                              onChange={e => handleReportUrlChange(s.id, e.target.value)} 
                               placeholder="URL del reporte..." 
                             />
                           </div>
@@ -315,7 +328,7 @@ const ClientManagement: React.FC = () => {
                           <input 
                             type="number" 
                             className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black text-lg" 
-                            value={formData.billing?.totalMentorshipValue || ''}
+                            value={formData.billing?.totalMentorshipValue || 0}
                             onChange={(e) => setFormData({
                                ...formData, 
                                billing: { 
@@ -389,7 +402,7 @@ const ClientManagement: React.FC = () => {
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Título</label>
-                                <input type="text" className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black" value={sessionForm.title} onChange={e => setSessionForm({...sessionForm, title: e.target.value})} />
+                                <input type="text" className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black" value={sessionForm.title || ''} onChange={e => setSessionForm({...sessionForm, title: e.target.value})} />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Modalidad</label>
@@ -401,13 +414,13 @@ const ClientManagement: React.FC = () => {
                            </div>
                            <div className="space-y-2">
                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Link Grabación</label>
-                              <input type="url" className="w-full bg-gray-50 border-none rounded-2xl p-4" value={sessionForm.recordingUrl} onChange={e => setSessionForm({...sessionForm, recordingUrl: e.target.value})} />
+                              <input type="url" className="w-full bg-gray-50 border-none rounded-2xl p-4" value={sessionForm.recordingUrl || ''} onChange={e => setSessionForm({...sessionForm, recordingUrl: e.target.value})} />
                            </div>
                         </div>
                         <div className="space-y-6">
                            <div className="space-y-2">
                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resumen Ejecutivo</label>
-                              <textarea className="w-full bg-gray-50 border-none rounded-2xl p-4 min-h-[145px] resize-none" value={sessionForm.summary} onChange={e => setSessionForm({...sessionForm, summary: e.target.value})} />
+                              <textarea className="w-full bg-gray-50 border-none rounded-2xl p-4 min-h-[145px] resize-none" value={sessionForm.summary || ''} onChange={e => setSessionForm({...sessionForm, summary: e.target.value})} />
                            </div>
                         </div>
                       </div>
@@ -422,7 +435,7 @@ const ClientManagement: React.FC = () => {
 
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             {(sessionForm.tasks || []).map((task, idx) => (
-                              <div key={idx} className="bg-white p-8 rounded-[3rem] border-2 border-gray-100 space-y-6 shadow-sm relative group">
+                              <div key={task.id} className="bg-white p-8 rounded-[3rem] border-2 border-gray-100 space-y-6 shadow-sm relative group">
                                  <button 
                                    onClick={() => {
                                      const nt = [...(sessionForm.tasks || [])];
@@ -434,18 +447,18 @@ const ClientManagement: React.FC = () => {
                                    <Trash2 size={18} />
                                  </button>
                                  <div className="space-y-6">
-                                    <input type="text" className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black" value={task.title} onChange={e => { const nt = [...(sessionForm.tasks || [])]; nt[idx].title = e.target.value; setSessionForm({...sessionForm, tasks: nt}); }} placeholder="Título de la tarea" />
+                                    <input type="text" className="w-full bg-gray-50 border-none rounded-2xl p-4 font-black" value={task.title} onChange={e => handleTaskChange(idx, 'title', e.target.value)} placeholder="Título de la tarea" />
                                     <div className="grid grid-cols-2 gap-4">
-                                       <select className="w-full bg-gray-50 rounded-xl p-3 text-[10px] font-black" value={task.urgency} onChange={e => { const nt = [...(sessionForm.tasks || [])]; nt[idx].urgency = e.target.value as TaskUrgency; setSessionForm({...sessionForm, tasks: nt}); }}>
+                                       <select className="w-full bg-gray-50 rounded-xl p-3 text-[10px] font-black" value={task.urgency} onChange={e => handleTaskChange(idx, 'urgency', e.target.value)}>
                                           <option value="urgent">🔴 URGENTE</option>
                                           <option value="attention">🟡 ATENCIÓN</option>
                                           <option value="weekly">🟢 SEMANAL</option>
                                        </select>
-                                       <select className="w-full bg-gray-50 rounded-xl p-3 text-[10px] font-black" value={task.category} onChange={e => { const nt = [...(sessionForm.tasks || [])]; nt[idx].category = e.target.value as TaskCategory; setSessionForm({...sessionForm, tasks: nt}); }}>
+                                       <select className="w-full bg-gray-50 rounded-xl p-3 text-[10px] font-black" value={task.category} onChange={e => handleTaskChange(idx, 'category', e.target.value)}>
                                           {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
                                        </select>
                                     </div>
-                                    <textarea className="w-full bg-gray-50 border-none rounded-2xl p-4 min-h-[100px] resize-none" value={task.description} onChange={e => { const nt = [...(sessionForm.tasks || [])]; nt[idx].description = e.target.value; setSessionForm({...sessionForm, tasks: nt}); }} placeholder="Descripción" />
+                                    <textarea className="w-full bg-gray-50 border-none rounded-2xl p-4 min-h-[100px] resize-none" value={task.description} onChange={e => handleTaskChange(idx, 'description', e.target.value)} placeholder="Descripción" />
                                  </div>
                               </div>
                             ))}
