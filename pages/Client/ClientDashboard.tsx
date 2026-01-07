@@ -97,7 +97,6 @@ const ClientDashboard: React.FC = () => {
 
       const formatDate = (d: Date) => d.toISOString().split('T')[0];
 
-      // Fetch simplificado sin cabeceras extra para evitar bloqueos en mobile
       const [res24, resC, resP] = await Promise.all([
         fetch(`https://graph.facebook.com/v19.0/${fullAccountId}/insights?level=account&fields=actions&time_range=${encodeURIComponent(JSON.stringify({ since: formatDate(yesterday), until: formatDate(today) }))}&access_token=${token}`).then(r => r.json()),
         fetch(`https://graph.facebook.com/v19.0/${fullAccountId}/insights?level=account&fields=spend,actions,action_values&time_range=${encodeURIComponent(JSON.stringify({ since: formatDate(s7), until: formatDate(today) }))}&access_token=${token}`).then(r => r.json()),
@@ -155,7 +154,6 @@ const ClientDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 pb-20 px-2 md:px-0">
-      {/* KPIs Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <MetricCard label="Ventas Meta (7d)" value={metrics?.current.revenue || 0} prevValue={metrics?.prev.revenue || 0} icon={<DollarSign className="text-green-600" />} color="bg-green-600" />
         <MetricCard label="ROAS Meta (7d)" value={metrics?.current.roas || 0} prevValue={metrics?.prev.roas || 0} icon={<Zap className="text-indigo-600" />} color="bg-indigo-600" />
@@ -195,7 +193,6 @@ const ClientDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Secciones */}
       <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 border-t pt-8 md:pt-10">
         <div>
           <span className="text-red-600 font-black uppercase text-[9px] md:text-[10px] tracking-widest flex items-center gap-2">
@@ -217,7 +214,6 @@ const ClientDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Iframe Looker Studio */}
       <div className="relative">
         <div className="h-[600px] md:h-[850px] bg-white rounded-[2rem] md:rounded-[4rem] border-4 border-gray-50 shadow-2xl overflow-hidden relative">
           {client.reportUrls[activeSection] ? (
@@ -246,7 +242,6 @@ const ClientDashboard: React.FC = () => {
           )}
         </div>
         
-        {/* Ayuda Mobile */}
         {client.reportUrls[activeSection] && (
           <div className="flex md:hidden justify-center mt-4">
             <a href={formatLookerUrl(client.reportUrls[activeSection])} target="_blank" rel="noreferrer" className="flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">
@@ -256,7 +251,6 @@ const ClientDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Roadmap */}
       <div className="bg-white rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 border border-gray-100 shadow-sm">
         <div className="flex items-center gap-4 md:gap-6 mb-8 md:mb-12">
           <div className="w-12 h-12 md:w-16 md:h-16 bg-red-600 text-white rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center shadow-xl shadow-red-100 shrink-0"><Activity size={32} /></div>

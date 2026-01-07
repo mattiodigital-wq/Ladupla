@@ -16,7 +16,8 @@ import {
   BookOpen,
   Bot,
   Calculator,
-  Facebook
+  Facebook,
+  RefreshCw
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -41,6 +42,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { to: '/admin/users', label: 'Gestión Accesos', icon: <Users size={20} /> },
     { to: '/admin/training', label: 'Academia & Tracking', icon: <GraduationCap size={20} /> },
     { to: '/admin/ai-analyst', label: 'Configuración API', icon: <Bot size={20} /> },
+    { to: '/admin/sync', label: 'Caja Fuerte / Sincro', icon: <RefreshCw size={20} /> },
   ];
 
   const currentPath = location.pathname;

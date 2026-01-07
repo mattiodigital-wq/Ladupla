@@ -14,6 +14,7 @@ import TrainingPortal from './pages/Client/TrainingPortal';
 import LessonDetail from './pages/Client/LessonDetail';
 import TrainingManagement from './pages/Admin/TrainingManagement';
 import AIAnalyst from './pages/Admin/AIAnalyst';
+import DataCenter from './pages/Admin/DataCenter';
 import AIAnalystView from './pages/Client/AIAnalystView';
 import ProductCostingView from './pages/Client/ProductCostingView';
 import MetaInsightsView from './pages/Client/MetaInsightsView';
@@ -136,6 +137,7 @@ const AppRoutes = () => {
       <Route path="/admin/users" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><UserManagement /></ProtectedRoute>} />
       <Route path="/admin/training" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><TrainingManagement /></ProtectedRoute>} />
       <Route path="/admin/ai-analyst" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><AIAnalyst /></ProtectedRoute>} />
+      <Route path="/admin/sync" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><DataCenter /></ProtectedRoute>} />
       <Route path="/admin/health/:id" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><ClientHealthView /></ProtectedRoute>} />
       <Route path="/" element={<ProtectedRoute>{user?.role === UserRole.ADMIN ? <Navigate to="/admin" replace /> : <ClientDashboard />}</ProtectedRoute>} />
       <Route path="/session/:id" element={<ProtectedRoute allowedRoles={[UserRole.CLIENT]}><AuditSessionView /></ProtectedRoute>} />

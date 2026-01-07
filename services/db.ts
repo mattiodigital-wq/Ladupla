@@ -8,48 +8,89 @@ const STORAGE_KEYS = {
   MODULES: 'mp_modules_v2',
   LESSONS: 'mp_lessons_v2',
   PROGRESS: 'mp_progress_v2',
-  AI_REPORTS: 'mp_ai_reports_v2'
+  AI_REPORTS: 'mp_ai_reports_v2',
+  CLOUD_CONFIG: 'mp_cloud_config_v2'
+};
+
+export interface CloudConfig {
+  url: string;
+  key: string;
+  isEnabled: boolean;
+}
+
+// Helper para llamadas a Supabase (REST API)
+const cloudFetch = async (table: string, method: string = 'GET', body?: any) => {
+  const config = db.getCloudConfig();
+  if (!config.isEnabled) return null;
+
+  const headers = {
+    'apikey': config.key,
+    'Authorization': `Bearer ${config.key}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+
+  const url = `${config.url}/rest/v1/${table}`;
+  
+  try {
+    const options: RequestInit = { method, headers };
+    if (body) options.body = JSON.stringify(body);
+    
+    // Si es GET y hay body, Supabase lo trata como filtros (aquí simplificado)
+    const response = await fetch(url + (method === 'GET' ? '?select=*' : ''), options);
+    if (!response.ok) throw new Error(await response.text());
+    return await response.json();
+  } catch (e) {
+    console.error(`Cloud Error (${table}):`, e);
+    return null;
+  }
 };
 
 export const db = {
   init: () => {
-    // Solo inicializa si el localStorage está vacío para evitar borrar datos reales del usuario
     if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([
         { id: 'u1', email: 'admin@laclinicadelecommerce.com', password: 'admin', name: 'Admin Clínica', role: UserRole.ADMIN, createdAt: new Date().toISOString() },
         { id: 'u2', email: 'cliente@demo.com', password: 'demo', name: 'Cliente Ejemplo', role: UserRole.CLIENT, clientId: 'c1', createdAt: new Date().toISOString() }
       ]));
     }
-
-    if (!localStorage.getItem(STORAGE_KEYS.CLIENTS)) {
-      localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify([
-        {
-          id: 'c1',
-          name: 'Marca Demo 1',
-          reportUrls: {
-            ventas: 'https://lookerstudio.google.com/embed/reporting/316f7347-1941-4c12-9c31-97b53941451a/page/LpD',
-            meta_ads: '',
-            tiktok_ads: '',
-            google_ads: '',
-            contenido: '',
-            comunidad: '',
-            crce: '',
-            segmentaciones: '',
-            creativos: ''
-          },
-          isActive: true,
-          createdAt: new Date().toISOString()
-        }
-      ]));
-    }
-    
     Object.values(STORAGE_KEYS).forEach(key => {
-      if (!localStorage.getItem(key)) {
-        localStorage.setItem(key, JSON.stringify([]));
-      }
+      if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify([]));
     });
   },
 
+  // Gestión de Configuración de Nube
+  getCloudConfig: (): CloudConfig => {
+    const saved = localStorage.getItem(STORAGE_KEYS.CLOUD_CONFIG);
+    return saved ? JSON.parse(saved) : { url: '', key: '', isEnabled: false };
+  },
+
+  saveCloudConfig: (config: CloudConfig) => {
+    localStorage.setItem(STORAGE_KEYS.CLOUD_CONFIG, JSON.stringify(config));
+  },
+
+  // Sincronización Masiva
+  exportFullBackup: () => {
+    const backup: Record<string, any> = {};
+    Object.entries(STORAGE_KEYS).forEach(([name, key]) => {
+      backup[key] = JSON.parse(localStorage.getItem(key) || '[]');
+    });
+    return JSON.stringify(backup);
+  },
+
+  importFullBackup: (jsonString: string) => {
+    try {
+      const backup = JSON.parse(jsonString);
+      Object.entries(backup).forEach(([key, data]) => {
+        localStorage.setItem(key, JSON.stringify(data));
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  // Lectura (Prioriza Local por velocidad, pero el Admin debería poder "Refrescar")
   getUsers: (): User[] => JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]'),
   getClients: (): Client[] => JSON.parse(localStorage.getItem(STORAGE_KEYS.CLIENTS) || '[]'),
   getSessions: (clientId?: string): AuditSession[] => {
@@ -70,63 +111,81 @@ export const db = {
     return all.filter((r: AIReport) => r.clientId === clientId).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
-  saveAIReport: (report: AIReport) => {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.AI_REPORTS) || '[]');
-    all.push(report);
-    localStorage.setItem(STORAGE_KEYS.AI_REPORTS, JSON.stringify(all));
-  },
-
-  markReportsAsRead: (clientId: string) => {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.AI_REPORTS) || '[]');
-    const updated = all.map((r: AIReport) => r.clientId === clientId ? { ...r, isReadByClient: true } : r);
-    localStorage.setItem(STORAGE_KEYS.AI_REPORTS, JSON.stringify(updated));
-  },
-
-  saveClient: (client: Client) => {
+  // Escritura Híbrida
+  saveClient: async (client: Client) => {
     const items = db.getClients();
     const idx = items.findIndex(c => c.id === client.id);
     if (idx > -1) items[idx] = client; else items.push(client);
     localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(items));
-  },
-
-  saveCostingData: (clientId: string, data: CostingData) => {
-    const clients = db.getClients();
-    const idx = clients.findIndex(c => c.id === clientId);
-    if (idx > -1) {
-      clients[idx].costingData = data;
-      localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+    
+    // Cloud Sync
+    const config = db.getCloudConfig();
+    if (config.isEnabled) {
+      // Intenta un UPSERT en Supabase (requiere tabla 'clients' configurada)
+      await cloudFetch('clients', 'POST', client); 
     }
   },
 
-  saveUser: (user: User) => {
+  saveUser: async (user: User) => {
     const items = db.getUsers();
     const idx = items.findIndex(u => u.id === user.id);
     if (idx > -1) items[idx] = user; else items.push(user);
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(items));
+    
+    const config = db.getCloudConfig();
+    if (config.isEnabled) await cloudFetch('users', 'POST', user);
   },
 
-  saveModule: (module: Module) => {
+  saveSession: async (session: AuditSession) => {
+    const items = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || '[]');
+    const idx = items.findIndex((s: any) => s.id === session.id);
+    if (idx > -1) items[idx] = session; else items.push(session);
+    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(items));
+    
+    const config = db.getCloudConfig();
+    if (config.isEnabled) await cloudFetch('sessions', 'POST', session);
+  },
+
+  saveModule: async (module: Module) => {
     const items = db.getModules();
     const idx = items.findIndex(m => m.id === module.id);
     if (idx > -1) items[idx] = module; else items.push(module);
     localStorage.setItem(STORAGE_KEYS.MODULES, JSON.stringify(items));
   },
 
-  saveLesson: (lesson: Lesson) => {
+  saveLesson: async (lesson: Lesson) => {
     const items = db.getLessons();
     const idx = items.findIndex(l => l.id === lesson.id);
     if (idx > -1) items[idx] = lesson; else items.push(lesson);
     localStorage.setItem(STORAGE_KEYS.LESSONS, JSON.stringify(items));
   },
 
-  saveSession: (session: AuditSession) => {
-    const items = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || '[]');
-    const idx = items.findIndex((s: any) => s.id === session.id);
-    if (idx > -1) items[idx] = session; else items.push(session);
-    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(items));
+  saveAIReport: async (report: AIReport) => {
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.AI_REPORTS) || '[]');
+    all.push(report);
+    localStorage.setItem(STORAGE_KEYS.AI_REPORTS, JSON.stringify(all));
   },
 
-  updateProgress: (progress: UserProgress) => {
+  // Fix: Added markReportsAsRead to update reports read status for a client
+  markReportsAsRead: (clientId: string) => {
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.AI_REPORTS) || '[]');
+    const updated = all.map((r: AIReport) => 
+      r.clientId === clientId ? { ...r, isReadByClient: true } : r
+    );
+    localStorage.setItem(STORAGE_KEYS.AI_REPORTS, JSON.stringify(updated));
+  },
+
+  // Fix: Added saveCostingData to persist product costing data for a client
+  saveCostingData: async (clientId: string, costingData: CostingData) => {
+    const clients = db.getClients();
+    const idx = clients.findIndex(c => c.id === clientId);
+    if (idx > -1) {
+      clients[idx].costingData = costingData;
+      await db.saveClient(clients[idx]);
+    }
+  },
+
+  updateProgress: async (progress: UserProgress) => {
     const items = db.getProgress();
     const idx = items.findIndex(p => p.userId === progress.userId && p.lessonId === progress.lessonId);
     if (idx > -1) items[idx] = progress; else items.push(progress);
