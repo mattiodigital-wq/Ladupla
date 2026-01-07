@@ -13,7 +13,6 @@ const STORAGE_KEYS = {
 
 export const db = {
   init: () => {
-    // Inicialización de Usuarios
     if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([
         { id: 'u1', email: 'admin@laclinicadelecommerce.com', password: 'admin', name: 'Admin Clínica', role: UserRole.ADMIN, createdAt: new Date().toISOString() },
@@ -21,7 +20,6 @@ export const db = {
       ]));
     }
 
-    // Inicialización de Cliente por Defecto (CRÍTICO: Evita el bloqueo en "Cargando historial")
     if (!localStorage.getItem(STORAGE_KEYS.CLIENTS) || JSON.parse(localStorage.getItem(STORAGE_KEYS.CLIENTS) || '[]').length === 0) {
       localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify([
         {
@@ -32,13 +30,13 @@ export const db = {
             meta_ads: '',
             tiktok_ads: '',
             google_ads: '',
-            google_analytics: '',
             contenido: '',
             comunidad: '',
             crce: '',
             segmentaciones: '',
             creativos: ''
           },
+          isActive: true,
           createdAt: new Date().toISOString()
         }
       ]));

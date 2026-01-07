@@ -49,7 +49,7 @@ const ClientManagement: React.FC = () => {
     setModalTab('info');
     if (client) { 
         setEditingClient(client); 
-        setFormData(client); 
+        setFormData({ ...client }); 
     } else { 
         setEditingClient(null); 
         setFormData({ 
@@ -85,15 +85,22 @@ const ClientManagement: React.FC = () => {
   const handleSave = () => {
     if (!formData.name) return;
     
-    // CORRECCIÓN: Usamos el spread operator para mantener aiConfig y costingData
+    // ATÓMICO: Obtener la versión más reciente del cliente de la DB antes de guardar
+    const allClients = db.getClients();
+    const latestClient = allClients.find(c => c.id === editingClient?.id);
+
     const clientToSave: Client = {
-      ...editingClient, // Preservamos TODO lo que ya existía (AI Config, Costos, etc)
-      ...formData,      // Sobrescribimos con lo que hay en el formulario actual
+      ...latestClient, // Preservamos aiConfig, costingData, etc.
+      ...formData,      // Aplicamos cambios del formulario
       id: editingClient?.id || Math.random().toString(36).substr(2, 9),
       name: formData.name!,
-      reportUrls: (formData.reportUrls || {}) as Record<ReportSection, string>,
+      // Aseguramos que reportUrls se mezcle correctamente si hubo cambios parciales
+      reportUrls: {
+        ...(latestClient?.reportUrls || {}),
+        ...(formData.reportUrls || {})
+      },
       isActive: formData.isActive ?? true,
-      createdAt: editingClient?.createdAt || new Date().toISOString()
+      createdAt: latestClient?.createdAt || new Date().toISOString()
     } as Client;
 
     db.saveClient(clientToSave);

@@ -40,10 +40,20 @@ const AIAnalyst: React.FC = () => {
 
   const handleSaveConfig = () => {
     if (selectedClient) {
-      const updatedClient = { ...selectedClient, aiConfig };
+      // ATÓMICO: Leer la versión más reciente del cliente de la base de datos
+      const allClients = db.getClients();
+      const latestClient = allClients.find(c => c.id === selectedClient.id);
+      
+      if (!latestClient) return;
+
+      const updatedClient = { 
+        ...latestClient, 
+        aiConfig 
+      };
+      
       db.saveClient(updatedClient);
       
-      // Actualizamos los estados locales para que no haya desincronización
+      // Actualizamos los estados locales
       setSelectedClient(updatedClient);
       setClients(db.getClients());
       
@@ -98,7 +108,6 @@ const AIAnalyst: React.FC = () => {
 
       {selectedClient ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* COLUMNA IZQUIERDA: CONFIGURACION API */}
           <div className="space-y-8">
             <div className="bg-white rounded-[3.5rem] border shadow-sm p-10 space-y-8 border-t-8 border-t-indigo-600">
               <div className="flex items-center gap-5">
@@ -145,7 +154,6 @@ const AIAnalyst: React.FC = () => {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: ENVIO MANUAL DE INFORMES */}
           <div className="space-y-8">
             <div className="bg-white rounded-[3.5rem] border shadow-sm p-10 space-y-8 border-t-8 border-t-red-600 h-full">
               <div className="flex items-center gap-5">
