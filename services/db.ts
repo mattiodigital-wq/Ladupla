@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
 
 export const db = {
   init: () => {
+    // Solo inicializa si el localStorage está vacío para evitar borrar datos reales del usuario
     if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([
         { id: 'u1', email: 'admin@laclinicadelecommerce.com', password: 'admin', name: 'Admin Clínica', role: UserRole.ADMIN, createdAt: new Date().toISOString() },
@@ -20,7 +21,7 @@ export const db = {
       ]));
     }
 
-    if (!localStorage.getItem(STORAGE_KEYS.CLIENTS) || JSON.parse(localStorage.getItem(STORAGE_KEYS.CLIENTS) || '[]').length === 0) {
+    if (!localStorage.getItem(STORAGE_KEYS.CLIENTS)) {
       localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify([
         {
           id: 'c1',
@@ -42,47 +43,11 @@ export const db = {
       ]));
     }
     
-    const keys = [
-      STORAGE_KEYS.SESSIONS, 
-      STORAGE_KEYS.MODULES, 
-      STORAGE_KEYS.LESSONS, 
-      STORAGE_KEYS.PROGRESS, 
-      STORAGE_KEYS.AI_REPORTS
-    ];
-    
-    keys.forEach(key => {
+    Object.values(STORAGE_KEYS).forEach(key => {
       if (!localStorage.getItem(key)) {
         localStorage.setItem(key, JSON.stringify([]));
       }
     });
-  },
-
-  exportAllData: () => {
-    const data: Record<string, any> = {};
-    Object.entries(STORAGE_KEYS).forEach(([key, value]) => {
-      data[key] = JSON.parse(localStorage.getItem(value) || '[]');
-    });
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `backup_clinica_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-  },
-
-  importAllData: (jsonData: string) => {
-    try {
-      const data = JSON.parse(jsonData);
-      Object.entries(data).forEach(([key, value]) => {
-        const storageKey = (STORAGE_KEYS as any)[key];
-        if (storageKey) {
-          localStorage.setItem(storageKey, JSON.stringify(value));
-        }
-      });
-      window.location.reload();
-    } catch (e) {
-      alert("Error al importar el archivo de backup.");
-    }
   },
 
   getUsers: (): User[] => JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]'),
