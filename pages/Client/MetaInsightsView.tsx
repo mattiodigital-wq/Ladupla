@@ -17,9 +17,6 @@ import {
   Loader2,
   TrendingUp,
   Layers,
-  Layout,
-  MousePointer2,
-  Eye,
   AlertCircle
 } from 'lucide-react';
 
@@ -38,6 +35,23 @@ interface MetaData {
   cpm: number;
   roas: number;
 }
+
+// Subcomponentes movidos fuera para estabilidad en mobile
+const LevelSelector = ({ stage, currentLevel, onLevelChange }: { stage: string, currentLevel: ViewLevel, onLevelChange: (lvl: ViewLevel) => void }) => (
+  <div className="flex bg-white/50 p-1 rounded-xl border border-gray-100 w-full md:w-auto overflow-x-auto no-scrollbar">
+    {(['campaigns', 'adsets', 'ads'] as ViewLevel[]).map((lvl) => (
+      <button
+        key={lvl}
+        onClick={() => onLevelChange(lvl)}
+        className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+          currentLevel === lvl ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'
+        }`}
+      >
+        {lvl === 'campaigns' ? 'Campañas' : lvl === 'adsets' ? 'Conjuntos' : 'Anuncios'}
+      </button>
+    ))}
+  </div>
+);
 
 const MetaInsightsView: React.FC = () => {
   const { user } = useAuth();
@@ -69,7 +83,8 @@ const MetaInsightsView: React.FC = () => {
 
   const fetchMetaInsights = async (config: AIConfig, start: string, end: string) => {
     const rawAccountId = config.metaAccountId || '';
-    const accountId = rawAccountId.startsWith('act_') ? rawAccountId : `act_${rawAccountId}`;
+    const cleanId = rawAccountId.trim();
+    const accountId = cleanId.startsWith('act_') ? cleanId : `act_${cleanId}`;
     const token = config.metaToken;
     const timeRange = encodeURIComponent(JSON.stringify({ since: start, until: end }));
     const fields = 'spend,clicks,impressions,actions,action_values,inline_link_click_ctr,cpm';
@@ -80,17 +95,20 @@ const MetaInsightsView: React.FC = () => {
       ad: `https://graph.facebook.com/v19.0/${accountId}/insights?level=ad&fields=campaign_name,adset_name,ad_name,${fields}&time_range=${timeRange}&limit=200&access_token=${token}`,
     };
 
-    const responses = await Promise.all([
-      fetch(urls.campaign).then(r => r.json()),
-      fetch(urls.adset).then(r => r.json()),
-      fetch(urls.ad).then(r => r.json())
+    const fetchWithErr = async (url: string) => {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      return data;
+    };
+
+    const [cData, aData, adData] = await Promise.all([
+      fetchWithErr(urls.campaign),
+      fetchWithErr(urls.adset),
+      fetchWithErr(urls.ad)
     ]);
 
-    responses.forEach(r => {
-      if (r.error) throw new Error(r.error.message);
-    });
-
-    return processMetaResponse(responses[0].data || [], responses[1].data || [], responses[2].data || []);
+    return processMetaResponse(cData.data || [], aData.data || [], adData.data || []);
   };
 
   const processMetaResponse = (campaigns: any[], adsets: any[], ads: any[]) => {
@@ -206,22 +224,6 @@ const MetaInsightsView: React.FC = () => {
     </th>
   );
 
-  const LevelSelector = ({ stage }: { stage: string }) => (
-    <div className="flex bg-white/50 p-1 rounded-xl border border-gray-100 w-full md:w-auto overflow-x-auto no-scrollbar">
-      {(['campaigns', 'adsets', 'ads'] as ViewLevel[]).map((lvl) => (
-        <button
-          key={lvl}
-          onClick={() => setLevels(prev => ({ ...prev, [stage]: lvl }))}
-          className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-            levels[stage] === lvl ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'
-          }`}
-        >
-          {lvl === 'campaigns' ? 'Campañas' : lvl === 'adsets' ? 'Conjuntos' : 'Anuncios'}
-        </button>
-      ))}
-    </div>
-  );
-
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20">
       {/* Header Responsivo */}
@@ -252,14 +254,17 @@ const MetaInsightsView: React.FC = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-100 p-6 rounded-2xl flex items-center gap-4 text-red-700">
+        <div className="bg-red-50 border border-red-100 p-6 rounded-2xl flex items-center gap-4 text-red-700 mx-2 md:mx-0 shadow-sm">
            <AlertCircle size={24} className="shrink-0" />
-           <p className="text-sm font-bold">{error}</p>
+           <div>
+             <p className="text-xs font-black uppercase tracking-widest mb-1">Error de API</p>
+             <p className="text-sm font-bold">{error}</p>
+           </div>
         </div>
       )}
 
       {insights && !loading && (
-        <div className="space-y-8 md:space-y-16">
+        <div className="space-y-8 md:space-y-16 px-2 md:px-0">
           {/* KPI Dashboard - Mobile Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {[
@@ -286,10 +291,10 @@ const MetaInsightsView: React.FC = () => {
                       <div className="w-12 h-12 md:w-14 md:h-14 bg-indigo-600 text-white rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center shadow-lg shrink-0"><UserPlus size={24} /></div>
                       <h3 className="text-xl md:text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none italic">Presentación</h3>
                    </div>
-                   <LevelSelector stage="presentacion" />
+                   <LevelSelector stage="presentacion" currentLevel={levels.presentacion} onLevelChange={(lvl) => setLevels(prev => ({...prev, presentacion: lvl}))} />
                 </div>
                 <div className="overflow-x-auto no-scrollbar">
-                   <table className="w-full text-left min-w-[600px] md:min-w-full">
+                   <table className="w-full text-left min-w-[700px] md:min-w-full">
                       <thead className="bg-gray-50">
                          <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">
                             <SortHeader label="Elemento" sortKey="name" align="left" />
@@ -324,10 +329,10 @@ const MetaInsightsView: React.FC = () => {
                       <div className="w-12 h-12 md:w-14 md:h-14 bg-amber-500 text-white rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center shadow-lg shrink-0"><Layers size={24} /></div>
                       <h3 className="text-xl md:text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none italic">Evaluación</h3>
                    </div>
-                   <LevelSelector stage="evaluacion" />
+                   <LevelSelector stage="evaluacion" currentLevel={levels.evaluacion} onLevelChange={(lvl) => setLevels(prev => ({...prev, evaluacion: lvl}))} />
                 </div>
                 <div className="overflow-x-auto no-scrollbar">
-                   <table className="w-full text-left min-w-[600px] md:min-w-full">
+                   <table className="w-full text-left min-w-[700px] md:min-w-full">
                       <thead className="bg-gray-50">
                          <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">
                             <SortHeader label="Elemento" sortKey="name" align="left" />
@@ -362,10 +367,10 @@ const MetaInsightsView: React.FC = () => {
                       <div className="w-12 h-12 md:w-14 md:h-14 bg-green-600 text-white rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center shadow-lg shrink-0"><Zap size={24} /></div>
                       <h3 className="text-xl md:text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none italic">Conversión</h3>
                    </div>
-                   <LevelSelector stage="conversion" />
+                   <LevelSelector stage="conversion" currentLevel={levels.conversion} onLevelChange={(lvl) => setLevels(prev => ({...prev, conversion: lvl}))} />
                 </div>
                 <div className="overflow-x-auto no-scrollbar">
-                   <table className="w-full text-left min-w-[600px] md:min-w-full">
+                   <table className="w-full text-left min-w-[700px] md:min-w-full">
                       <thead className="bg-gray-50">
                          <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">
                             <SortHeader label="Elemento" sortKey="name" align="left" />
