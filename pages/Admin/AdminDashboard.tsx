@@ -3,23 +3,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../../services/db';
 import { Client } from '../../types';
 import { 
-  LayoutDashboard, 
-  Users, 
-  Briefcase, 
-  Download, 
-  Upload, 
-  ShieldCheck, 
-  Database,
-  Activity,
-  ChevronRight,
-  Stethoscope,
-  TrendingUp,
+  RefreshCw, 
+  DollarSign, 
+  PieChart, 
+  Stethoscope, 
+  TrendingUp, 
   TrendingDown,
-  RefreshCw,
-  DollarSign,
-  PieChart,
-  CheckCircle2,
-  AlertCircle
+  Activity,
+  HeartPulse
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -30,33 +21,14 @@ interface ClientMetrics {
   salesLast24h?: number;
   revenueDiff?: number;
   roasDiff?: number;
-  loading: boolean;
+  loading?: boolean;
 }
 
 export const Overview = () => {
   const [clients, setClients] = useState<Client[]>([]);
-  const [usersCount, setUsersCount] = useState(0);
   const [metricsMap, setMetricsMap] = useState<Record<string, ClientMetrics>>({});
 
-  const loadData = useCallback(() => {
-    const fetchedClients = db.getClients();
-    setClients(fetchedClients);
-    setUsersCount(db.getUsers().length);
-    
-    fetchedClients.forEach(client => {
-      if (client.aiConfig?.metaToken) {
-        setMetricsMap(prev => ({ 
-          ...prev, 
-          [client.id]: { ...(prev[client.id] || {}), loading: true } 
-        }));
-        fetchClientHealth(client);
-      }
-    });
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  const fetchClientHealth = async (client: Client) => {
+  const fetchClientHealth = useCallback(async (client: Client) => {
     if (!client.aiConfig?.metaToken || !client.aiConfig?.metaAccountId) return;
     try {
       const token = client.aiConfig.metaToken;
@@ -81,7 +53,7 @@ export const Overview = () => {
       ]);
 
       const getStats = (res: any) => {
-        const d = res.data?.[0] || {};
+        const d = res?.data?.[0] || {};
         return {
           spend: parseFloat(d.spend || "0"),
           rev: parseFloat(d.action_values?.find((v: any) => v.action_type === 'purchase')?.value || "0"),
@@ -110,9 +82,26 @@ export const Overview = () => {
       }));
     } catch (e) { 
       console.error(`Err: ${client.name}`, e);
-      setMetricsMap(prev => ({ ...prev, [client.id]: { ...(prev[client.id] || {}), loading: false } }));
+      setMetricsMap(prev => ({ ...prev, [client.id]: { loading: false } }));
     }
-  };
+  }, []);
+
+  const loadData = useCallback(() => {
+    const fetchedClients = db.getClients();
+    setClients(fetchedClients);
+    
+    fetchedClients.forEach(client => {
+      if (client.aiConfig?.metaToken) {
+        setMetricsMap(prev => ({ 
+          ...prev, 
+          [client.id]: { ...prev[client.id], loading: true } 
+        }));
+        fetchClientHealth(client);
+      }
+    });
+  }, [fetchClientHealth]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const calculateAccounting = () => {
     let pending = 0, collected = 0, thisMonth = 0, newRev = 0;
@@ -193,12 +182,16 @@ export const Overview = () => {
                     </td>
                     <td className="px-6 py-8">
                        {metrics?.loading ? <div className="w-20 h-4 bg-gray-100 animate-pulse rounded"></div> : (
-                         <span className="font-black text-gray-900 text-lg">${metrics?.revenue?.toLocaleString() || '---'}</span>
+                         <span className="font-black text-gray-900 text-lg">
+                           {metrics?.revenue !== undefined ? `$${metrics.revenue.toLocaleString()}` : '---'}
+                         </span>
                        )}
                     </td>
                     <td className="px-6 py-8">
                        {metrics?.loading ? <div className="w-10 h-4 bg-gray-100 animate-pulse rounded"></div> : (
-                         <span className="font-black text-indigo-600 text-lg">{metrics?.roas?.toFixed(2) || '---'}x</span>
+                         <span className="font-black text-indigo-600 text-lg">
+                           {metrics?.roas !== undefined ? `${metrics.roas.toFixed(2)}x` : '---'}
+                         </span>
                        )}
                     </td>
                     <td className="px-6 py-8 text-center">

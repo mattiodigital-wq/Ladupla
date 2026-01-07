@@ -17,7 +17,6 @@ export type ReportSection =
 
 export type TaskCategory = 'tienda' | 'meta_ads' | 'contenido' | 'google_ads' | 'email_marketing' | 'tiktok_ads' | 'conversiones';
 
-// Added missing types for inventory analytics
 export interface ProductMetric {
   name: string;
   value: number;
@@ -33,7 +32,6 @@ export interface AIConfig {
   prompt: string;
   metaToken?: string;
   metaAccountId?: string;
-  // Added missing properties for tracking and analytics
   lastMetrics?: LastMetrics;
   analyticsId?: string;
   analyticsToken?: string;
@@ -81,7 +79,6 @@ export interface ProductCosting {
   adCostPerSale: number;
 }
 
-// Added missing ProductClassification type
 export type ProductClassification = 'ESTRELLA' | 'MEH' | 'ZOMBIE' | 'TÓXICO';
 
 export interface CostingData {
@@ -154,7 +151,6 @@ export interface Lesson {
   templateUrl?: string;
 }
 
-// Added missing UserProgress interface
 export interface UserProgress {
   userId: string;
   lessonId: string;

@@ -7,8 +7,6 @@ import { SECTIONS } from '../../constants';
 import { 
   AlertTriangle, 
   Loader2, 
-  ListTodo, 
-  CheckCircle2, 
   Circle,
   Stethoscope,
   TrendingUp,
@@ -18,7 +16,8 @@ import {
   RefreshCw,
   ArrowRight,
   Activity,
-  HeartPulse
+  HeartPulse,
+  CheckCircle2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -40,17 +39,17 @@ const ClientDashboard: React.FC = () => {
     if (!url) return '';
     let formatted = url.trim();
     
-    // Limpiar cualquier parámetro previo que pueda corromper la URL de embebido
+    // 1. Limpiar cualquier parámetro previo que pueda corromper la URL
     if (formatted.includes('?')) {
         formatted = formatted.split('?')[0];
     }
 
-    // Si la URL es la estándar de visualización, la convertimos a embebido
+    // 2. Convertir a modo embebido si es una URL estándar
     if (formatted.includes('/reporting/') && !formatted.includes('/embed/reporting/')) {
       formatted = formatted.replace('/reporting/', '/embed/reporting/');
     }
     
-    // Aseguramos que no haya parámetros de edición que bloqueen el frame
+    // 3. Eliminar modos de edición
     if (formatted.includes('/edit')) {
       formatted = formatted.split('/edit')[0];
     }
@@ -229,7 +228,7 @@ const ClientDashboard: React.FC = () => {
 
       <div className="bg-white rounded-[3rem] p-12 border border-gray-100 shadow-sm">
         <div className="flex items-center gap-6 mb-12">
-          <div className="w-16 h-16 bg-red-600 text-white rounded-[2rem] flex items-center justify-center shadow-xl shadow-red-100"><ListTodo size={32} /></div>
+          <div className="w-16 h-16 bg-red-600 text-white rounded-[2rem] flex items-center justify-center shadow-xl shadow-red-100"><Activity size={32} /></div>
           <h2 className="text-4xl font-black text-gray-900 tracking-tighter uppercase leading-none">Roadmap Estratégico</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
