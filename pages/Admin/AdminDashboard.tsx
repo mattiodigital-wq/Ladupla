@@ -24,12 +24,12 @@ import {
 import { Link } from 'react-router-dom';
 
 interface ClientMetrics {
-  revenue: number;
-  roas: number;
-  sales: number;
-  salesLast24h: number;
-  revenueDiff: number;
-  roasDiff: number;
+  revenue?: number;
+  roas?: number;
+  sales?: number;
+  salesLast24h?: number;
+  revenueDiff?: number;
+  roasDiff?: number;
   loading: boolean;
 }
 
@@ -45,7 +45,10 @@ export const Overview = () => {
     
     fetchedClients.forEach(client => {
       if (client.aiConfig?.metaToken) {
-        setMetricsMap(prev => ({ ...prev, [client.id]: { ...(prev[client.id] || {}), loading: true } }));
+        setMetricsMap(prev => ({ 
+          ...prev, 
+          [client.id]: { ...(prev[client.id] || {}), loading: true } 
+        }));
         fetchClientHealth(client);
       }
     });
@@ -105,7 +108,10 @@ export const Overview = () => {
           loading: false
         }
       }));
-    } catch (e) { console.error(`Err: ${client.name}`, e); }
+    } catch (e) { 
+      console.error(`Err: ${client.name}`, e);
+      setMetricsMap(prev => ({ ...prev, [client.id]: { ...(prev[client.id] || {}), loading: false } }));
+    }
   };
 
   const calculateAccounting = () => {
@@ -187,23 +193,23 @@ export const Overview = () => {
                     </td>
                     <td className="px-6 py-8">
                        {metrics?.loading ? <div className="w-20 h-4 bg-gray-100 animate-pulse rounded"></div> : (
-                         <span className="font-black text-gray-900 text-lg">${metrics?.revenue.toLocaleString() || '---'}</span>
+                         <span className="font-black text-gray-900 text-lg">${metrics?.revenue?.toLocaleString() || '---'}</span>
                        )}
                     </td>
                     <td className="px-6 py-8">
                        {metrics?.loading ? <div className="w-10 h-4 bg-gray-100 animate-pulse rounded"></div> : (
-                         <span className="font-black text-indigo-600 text-lg">{metrics?.roas.toFixed(2) || '---'}x</span>
+                         <span className="font-black text-indigo-600 text-lg">{metrics?.roas?.toFixed(2) || '---'}x</span>
                        )}
                     </td>
                     <td className="px-6 py-8 text-center">
                        {metrics?.loading ? <div className="w-6 h-6 bg-gray-100 animate-pulse rounded-full mx-auto"></div> : (
                          <div className="flex flex-col items-center">
-                            <div className={`w-3 h-3 rounded-full ${metrics?.salesLast24h > 0 ? 'bg-green-500 animate-pulse shadow-lg shadow-green-200' : 'bg-gray-200'}`}></div>
+                            <div className={`w-3 h-3 rounded-full ${(metrics?.salesLast24h || 0) > 0 ? 'bg-green-500 animate-pulse shadow-lg shadow-green-200' : 'bg-gray-200'}`}></div>
                             <span className="text-[10px] font-black mt-1">{metrics?.salesLast24h || 0} vtas</span>
                          </div>
                        )}
                     </td>
-                    <td className="px-10 py-8 text-right flex items-center justify-end gap-3 mt-4">
+                    <td className="px-10 py-8 text-right flex items-center justify-end gap-3">
                       <Link to={`/admin/health/${client.id}`} className="p-3 bg-gray-50 text-gray-400 hover:bg-[#b10000] hover:text-white rounded-2xl shadow-sm transition-all"><Stethoscope size={18} /></Link>
                       <Link to="/admin/clients" className="bg-[#b10000] text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase shadow-lg shadow-red-100">Ficha</Link>
                     </td>

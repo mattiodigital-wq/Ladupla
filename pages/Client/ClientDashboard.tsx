@@ -39,14 +39,22 @@ const ClientDashboard: React.FC = () => {
   const formatLookerUrl = (url: string) => {
     if (!url) return '';
     let formatted = url.trim();
+    
+    // Limpiar cualquier parámetro previo que pueda corromper la URL de embebido
+    if (formatted.includes('?')) {
+        formatted = formatted.split('?')[0];
+    }
+
     // Si la URL es la estándar de visualización, la convertimos a embebido
     if (formatted.includes('/reporting/') && !formatted.includes('/embed/reporting/')) {
       formatted = formatted.replace('/reporting/', '/embed/reporting/');
     }
+    
     // Aseguramos que no haya parámetros de edición que bloqueen el frame
     if (formatted.includes('/edit')) {
       formatted = formatted.split('/edit')[0];
     }
+
     return formatted;
   };
 
@@ -104,7 +112,7 @@ const ClientDashboard: React.FC = () => {
     }
   }, [user, fetchMetrics]);
 
-  if (!client) return <div className="p-20 text-center animate-pulse">Cargando Historia Clínica...</div>;
+  if (!client) return <div className="p-20 text-center animate-pulse font-black uppercase text-gray-400">Invocando Historial...</div>;
 
   const getDiff = (curr: number, prev: number) => {
     if (prev === 0) return 0;
@@ -203,6 +211,7 @@ const ClientDashboard: React.FC = () => {
             className="w-full h-full border-none"
             allowFullScreen
             loading="lazy"
+            allow="attribution-reporting; run-ad-auction; join-ad-interest-group; browsing-topics"
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center p-20 text-center opacity-30">
