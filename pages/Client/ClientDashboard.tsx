@@ -97,7 +97,7 @@ const ClientDashboard: React.FC = () => {
 
       const formatDate = (d: Date) => d.toISOString().split('T')[0];
 
-      // Fetch simplificado para evitar bloqueos de CORS/Safari
+      // Fetch simplificado sin cabeceras extra para evitar bloqueos en mobile
       const [res24, resC, resP] = await Promise.all([
         fetch(`https://graph.facebook.com/v19.0/${fullAccountId}/insights?level=account&fields=actions&time_range=${encodeURIComponent(JSON.stringify({ since: formatDate(yesterday), until: formatDate(today) }))}&access_token=${token}`).then(r => r.json()),
         fetch(`https://graph.facebook.com/v19.0/${fullAccountId}/insights?level=account&fields=spend,actions,action_values&time_range=${encodeURIComponent(JSON.stringify({ since: formatDate(s7), until: formatDate(today) }))}&access_token=${token}`).then(r => r.json()),
@@ -155,7 +155,7 @@ const ClientDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 pb-20 px-2 md:px-0">
-      {/* KPIs Grid - 1 columna en móvil para evitar recortes */}
+      {/* KPIs Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <MetricCard label="Ventas Meta (7d)" value={metrics?.current.revenue || 0} prevValue={metrics?.prev.revenue || 0} icon={<DollarSign className="text-green-600" />} color="bg-green-600" />
         <MetricCard label="ROAS Meta (7d)" value={metrics?.current.roas || 0} prevValue={metrics?.prev.roas || 0} icon={<Zap className="text-indigo-600" />} color="bg-indigo-600" />
@@ -191,11 +191,11 @@ const ClientDashboard: React.FC = () => {
       {apiError && (
         <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-600 text-[10px] md:text-xs font-bold shadow-sm">
           <AlertCircle size={16} className="shrink-0" />
-          <span>Error Meta API: {apiError}. (En iPhone desactiva 'Bloquear cookies' en Ajustes > Safari)</span>
+          <span>Error Meta API: {apiError}. (En iPhone desactiva 'Bloquear cookies' en Ajustes &gt; Safari)</span>
         </div>
       )}
 
-      {/* Secciones - Carrusel con snap en móvil */}
+      {/* Secciones */}
       <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 border-t pt-8 md:pt-10">
         <div>
           <span className="text-red-600 font-black uppercase text-[9px] md:text-[10px] tracking-widest flex items-center gap-2">
@@ -217,9 +217,9 @@ const ClientDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Contenedor Iframe con altura responsiva */}
+      {/* Iframe Looker Studio */}
       <div className="relative">
-        <div className="h-[550px] md:h-[850px] bg-white rounded-[2rem] md:rounded-[4rem] border-4 border-gray-50 shadow-2xl overflow-hidden relative">
+        <div className="h-[600px] md:h-[850px] bg-white rounded-[2rem] md:rounded-[4rem] border-4 border-gray-50 shadow-2xl overflow-hidden relative">
           {client.reportUrls[activeSection] ? (
             <iframe
               src={formatLookerUrl(client.reportUrls[activeSection])}
@@ -228,7 +228,6 @@ const ClientDashboard: React.FC = () => {
               style={{ width: '100%', height: '100%', border: 'none', position: 'absolute' }}
               allowFullScreen
               loading="lazy"
-              // Flags críticas para que Safari no bloquee Looker Studio
               sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-forms"
               allow="attribution-reporting; run-ad-auction; join-ad-interest-group; browsing-topics"
             />
@@ -247,7 +246,7 @@ const ClientDashboard: React.FC = () => {
           )}
         </div>
         
-        {/* Botón auxiliar para móvil */}
+        {/* Ayuda Mobile */}
         {client.reportUrls[activeSection] && (
           <div className="flex md:hidden justify-center mt-4">
             <a href={formatLookerUrl(client.reportUrls[activeSection])} target="_blank" rel="noreferrer" className="flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">
