@@ -84,14 +84,18 @@ const ClientManagement: React.FC = () => {
 
   const handleSave = () => {
     if (!formData.name) return;
+    
+    // CORRECCIÓN: Usamos el spread operator para mantener aiConfig y costingData
     const clientToSave: Client = {
+      ...editingClient, // Preservamos TODO lo que ya existía (AI Config, Costos, etc)
+      ...formData,      // Sobrescribimos con lo que hay en el formulario actual
       id: editingClient?.id || Math.random().toString(36).substr(2, 9),
       name: formData.name!,
       reportUrls: (formData.reportUrls || {}) as Record<ReportSection, string>,
       isActive: formData.isActive ?? true,
-      billing: formData.billing,
       createdAt: editingClient?.createdAt || new Date().toISOString()
-    };
+    } as Client;
+
     db.saveClient(clientToSave);
     setClients(db.getClients());
     setIsModalOpen(false);

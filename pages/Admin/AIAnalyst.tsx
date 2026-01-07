@@ -42,6 +42,11 @@ const AIAnalyst: React.FC = () => {
     if (selectedClient) {
       const updatedClient = { ...selectedClient, aiConfig };
       db.saveClient(updatedClient);
+      
+      // Actualizamos los estados locales para que no haya desincronización
+      setSelectedClient(updatedClient);
+      setClients(db.getClients());
+      
       setStatusMessage({ type: 'success', text: 'Conexión con Meta API actualizada.' });
       setTimeout(() => setStatusMessage(null), 3000);
     }
