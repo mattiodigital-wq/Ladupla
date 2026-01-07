@@ -39,17 +39,12 @@ const ClientDashboard: React.FC = () => {
     if (!url) return '';
     let formatted = url.trim();
     
-    // 1. Limpiar cualquier parámetro previo que pueda corromper la URL
-    if (formatted.indexOf('?') !== -1) {
-        formatted = formatted.split('?')[0];
-    }
-
-    // 2. Convertir a modo embebido si es una URL estándar
+    // Convertir a modo embebido si es una URL estándar
     if (formatted.indexOf('/reporting/') !== -1 && formatted.indexOf('/embed/reporting/') === -1) {
       formatted = formatted.replace('/reporting/', '/embed/reporting/');
     }
     
-    // 3. Eliminar modos de edición
+    // Eliminar modos de edición si existen
     if (formatted.indexOf('/edit') !== -1) {
       formatted = formatted.split('/edit')[0];
     }
@@ -202,12 +197,13 @@ const ClientDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="min-h-[850px] bg-white rounded-[4rem] border-4 border-gray-50 shadow-2xl overflow-hidden relative">
+      <div className="h-[850px] bg-white rounded-[4rem] border-4 border-gray-50 shadow-2xl overflow-hidden relative">
         {client.reportUrls[activeSection] ? (
           <iframe
             src={formatLookerUrl(client.reportUrls[activeSection])}
             onLoad={() => setIframeLoading(false)}
             className="w-full h-full border-none"
+            style={{ width: '100%', height: '100%', border: 'none' }}
             allowFullScreen
             loading="lazy"
             allow="attribution-reporting; run-ad-auction; join-ad-interest-group; browsing-topics"
