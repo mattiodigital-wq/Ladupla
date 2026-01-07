@@ -110,14 +110,16 @@ export const Overview = () => {
       installments.forEach(ins => {
         if (ins.isPaid) {
           collected += ins.amount;
-          if (ins.paidAt && new Date(ins.paidAt).getMonth() === now.getMonth()) {
+          const paidDate = ins.paidAt ? new Date(ins.paidAt) : null;
+          if (paidDate && paidDate.getMonth() === now.getMonth()) {
             thisMonth += ins.amount;
           }
         } else {
           pending += ins.amount;
         }
       });
-      if (new Date(c.createdAt).getMonth() === now.getMonth()) {
+      const createdDate = new Date(c.createdAt);
+      if (createdDate.getMonth() === now.getMonth()) {
         newRev += (c.billing?.totalMentorshipValue || 0);
       }
     });
@@ -180,7 +182,9 @@ export const Overview = () => {
                 const metrics = metricsMap[client.id] || { loading: false };
                 const salesLast24h = metrics.salesLast24h || 0;
                 const hasRecentSales = salesLast24h !== 0;
-                
+                const revenueText = metrics.revenue !== undefined ? `$${metrics.revenue.toLocaleString()}` : '---';
+                const roasText = metrics.roas !== undefined ? `${metrics.roas.toFixed(2)}x` : '---';
+
                 return (
                   <tr key={client.id} className="hover:bg-gray-50/50 transition-colors group font-['Montserrat']">
                     <td className="px-10 py-8">
@@ -191,16 +195,12 @@ export const Overview = () => {
                     </td>
                     <td className="px-6 py-8">
                        {metrics.loading ? <div className="w-20 h-4 bg-gray-100 animate-pulse rounded"></div> : (
-                         <span className="font-black text-gray-900 text-lg">
-                           {metrics.revenue !== undefined ? `$${metrics.revenue.toLocaleString()}` : '---'}
-                         </span>
+                         <span className="font-black text-gray-900 text-lg">{revenueText}</span>
                        )}
                     </td>
                     <td className="px-6 py-8">
                        {metrics.loading ? <div className="w-10 h-4 bg-gray-100 animate-pulse rounded"></div> : (
-                         <span className="font-black text-indigo-600 text-lg">
-                           {metrics.roas !== undefined ? `${metrics.roas.toFixed(2)}x` : '---'}
-                         </span>
+                         <span className="font-black text-indigo-600 text-lg">{roasText}</span>
                        )}
                     </td>
                     <td className="px-6 py-8 text-center">

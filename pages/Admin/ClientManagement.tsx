@@ -275,7 +275,7 @@ const ClientManagement: React.FC = () => {
                      <div className="space-y-1">
                         <p className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">¿Cómo evitar el error de conexión?</p>
                         <p className="text-xs text-indigo-700 leading-relaxed">
-                          En Looker Studio, ve a <b>Archivo > Insertar informe</b>. Asegúrate de que <b>Habilitar inserción</b> esté marcado. Copia esa URL o pega el enlace estándar de visualización aquí; el portal lo convertirá automáticamente.
+                          En Looker Studio, ve a <b>Archivo &gt; Insertar informe</b>. Asegúrate de que <b>Habilitar inserción</b> esté marcado. Copia esa URL o pega el enlace estándar de visualización aquí; el portal lo convertirá automáticamente.
                         </p>
                      </div>
                   </div>
