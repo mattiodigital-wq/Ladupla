@@ -10,15 +10,13 @@ import {
   LayoutDashboard, 
   Users, 
   Briefcase,
-  ChevronRight,
-  MessageCircle,
   GraduationCap,
   BookOpen,
   Bot,
   Calculator,
   Facebook,
   RefreshCw,
-  CloudCheck
+  PackageSearch
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -32,13 +30,11 @@ const CloudCheckIcon = ({ size }: { size: number }) => (
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [clientSessions, setClientSessions] = useState<AuditSession[]>([]);
   const [unreadAI, setUnreadAI] = useState(0);
   const location = useLocation();
 
   useEffect(() => {
     if (user?.role === UserRole.CLIENT && user.clientId) {
-      setClientSessions(db.getSessions(user.clientId));
       const reports = db.getAIReports(user.clientId);
       setUnreadAI(reports.filter(r => !r.isReadByClient).length);
     }
@@ -99,7 +95,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </div>
             ) : (
               <div className="space-y-8">
-                {/* Menú Cliente */}
                 <div className="space-y-1">
                   <p className="px-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Tratamiento Técnico</p>
                   <Link to="/" className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${currentPath === '/' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'}`} onClick={() => setIsSidebarOpen(false)}>
@@ -109,6 +104,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   <Link to="/meta-insights" className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${currentPath === '/meta-insights' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'}`} onClick={() => setIsSidebarOpen(false)}>
                     <Facebook size={20} />
                     <span className="font-bold text-sm">Meta Insights</span>
+                  </Link>
+                  <Link to="/product-insights" className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${currentPath === '/product-insights' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'}`} onClick={() => setIsSidebarOpen(false)}>
+                    <PackageSearch size={20} />
+                    <span className="font-bold text-sm">Inventario IA</span>
                   </Link>
                   <Link to="/profitability" className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${currentPath === '/profitability' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'}`} onClick={() => setIsSidebarOpen(false)}>
                     <Calculator size={20} />

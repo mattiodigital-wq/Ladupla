@@ -9,11 +9,12 @@ import {
   Eye, 
   ShoppingCart, 
   Sparkles, 
-  AlertCircle, 
   Stethoscope,
   BarChart3,
   Bot,
-  ArrowRight
+  ArrowRight,
+  RefreshCw,
+  X
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -36,9 +37,15 @@ const ProductIAView: React.FC = () => {
 
   const generateQuickInsight = async () => {
     if (!metrics) return;
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      setQuickInsight("⚠️ Error: No se ha configurado la clave de IA en el servidor.");
+      return;
+    }
+
     setIsAnalyzing(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey });
       const prompt = `Analiza estos datos de productos y dime en 2 frases cuál es el problema de conversión más grande:
       TOP VENTAS: ${metrics.topSold?.map(p => p.name).join(', ')}
       TOP VISITAS: ${metrics.topVisited?.map(p => p.name).join(', ')}
@@ -51,7 +58,7 @@ const ProductIAView: React.FC = () => {
       });
       setQuickInsight(response.text || "No se pudo generar el insight.");
     } catch (e) {
-      setQuickInsight("Error al conectar con el servidor de diagnóstico.");
+      setQuickInsight("Error al conectar con el servidor de diagnóstico de Google.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -129,11 +136,11 @@ const ProductIAView: React.FC = () => {
           <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-indigo-600 shadow-xl shadow-indigo-100 shrink-0">
             <Bot size={32} />
           </div>
-          <div>
+          <div className="flex-1">
             <h3 className="font-black text-indigo-900 uppercase tracking-tighter mb-2">Insight Clínico del Dr. AI</h3>
             <p className="text-indigo-800 text-lg font-medium italic leading-relaxed">"{quickInsight}"</p>
           </div>
-          <button onClick={() => setQuickInsight(null)} className="text-indigo-300 hover:text-indigo-600 ml-auto">
+          <button onClick={() => setQuickInsight(null)} className="text-indigo-300 hover:text-indigo-600 shrink-0">
             <X size={24} />
           </button>
         </div>
@@ -180,43 +187,5 @@ const ProductIAView: React.FC = () => {
     </div>
   );
 };
-
-const RefreshCw = ({ className, size }: { className?: string, size?: number }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width={size || 24} 
-    height={size || 24} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-    <path d="M21 3v5h-5" />
-    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-    <path d="M3 21v-5h5" />
-  </svg>
-);
-
-const X = ({ size, className }: { size?: number, className?: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width={size || 24} 
-    height={size || 24} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="M18 6 6 18" />
-    <path d="m6 6 12 12" />
-  </svg>
-);
 
 export default ProductIAView;

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { User, UserRole, AuthState, Client } from './types';
+import { User, UserRole, AuthState } from './types';
 import { db } from './services/db';
 import LoginPage from './pages/LoginPage';
 import { Overview } from './pages/Admin/AdminDashboard';
@@ -16,6 +16,7 @@ import TrainingManagement from './pages/Admin/TrainingManagement';
 import AIAnalyst from './pages/Admin/AIAnalyst';
 import DataCenter from './pages/Admin/DataCenter';
 import AIAnalystView from './pages/Client/AIAnalystView';
+import ProductIAView from './pages/Client/ProductIAView';
 import ProductCostingView from './pages/Client/ProductCostingView';
 import MetaInsightsView from './pages/Client/MetaInsightsView';
 import { Layout } from './components/Layout';
@@ -45,7 +46,6 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     const initApp = async () => {
-      // Sincronizar con la nube antes de cualquier cosa
       await db.init();
       setIsSyncing(false);
 
@@ -76,7 +76,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const login = async (email: string, pass: string) => {
     setIsSyncing(true);
     try {
-      await db.syncFromCloud(); // Asegurar que tenemos los últimos usuarios
+      await db.syncFromCloud();
       const users = db.getUsers();
       const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
       if (user) {
@@ -170,6 +170,7 @@ const AppRoutes = () => {
       <Route path="/session/:id" element={<ProtectedRoute allowedRoles={[UserRole.CLIENT]}><AuditSessionView /></ProtectedRoute>} />
       <Route path="/ai-analyst" element={<ProtectedRoute allowedRoles={[UserRole.CLIENT]}><AIAnalystView /></ProtectedRoute>} />
       <Route path="/meta-insights" element={<ProtectedRoute allowedRoles={[UserRole.CLIENT]}><MetaInsightsView /></ProtectedRoute>} />
+      <Route path="/product-insights" element={<ProtectedRoute allowedRoles={[UserRole.CLIENT]}><ProductIAView /></ProtectedRoute>} />
       <Route path="/profitability" element={<ProtectedRoute allowedRoles={[UserRole.CLIENT]}><ProductCostingView /></ProtectedRoute>} />
       <Route path="/training" element={<ProtectedRoute><TrainingPortal /></ProtectedRoute>} />
       <Route path="/training/lesson/:id" element={<ProtectedRoute><LessonDetail /></ProtectedRoute>} />
