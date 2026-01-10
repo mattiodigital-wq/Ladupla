@@ -75,16 +75,34 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   const login = async (email: string, pass: string) => {
     setIsSyncing(true);
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = pass.trim();
+
     try {
+      // 1. Intentar sincronizar primero
       await db.syncFromCloud();
+      
+      // 2. Buscar localmente
       const users = db.getUsers();
-      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
+      let user = users.find(u => u.email.toLowerCase() === cleanEmail && u.password === cleanPass);
+      
+      // 3. Si no se encuentra (puede ser un usuario recién creado que no bajó), consultar nube directamente
+      if (!user) {
+        console.log("🔍 Usuario no encontrado localmente, verificando en la nube...");
+        const cloudUser = await db.verifyUserCloud(cleanEmail);
+        if (cloudUser && cloudUser.password === cleanPass) {
+          user = cloudUser;
+        }
+      }
+
       if (user) {
         localStorage.setItem('mp_session', JSON.stringify(user));
         setState({ user, isAuthenticated: true, isLoading: false });
       } else {
         throw new Error("Credenciales inválidas");
       }
+    } catch (e: any) {
+      throw new Error(e.message || "Error al conectar con el servidor");
     } finally {
       setIsSyncing(false);
     }
@@ -119,7 +137,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: UserR
            </div>
            <div className="text-center space-y-1">
               <p className="font-black uppercase tracking-[0.3em] text-[10px]">Conectando con la Nube</p>
-              <p className="text-white/60 text-xs font-medium italic">Sincronizando expedientes técnicos...</p>
+              <p className="text-white/60 text-xs font-medium italic">Verificando credenciales encriptadas...</p>
            </div>
         </div>
       </div>

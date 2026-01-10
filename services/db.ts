@@ -34,7 +34,7 @@ const cloudFetch = async (table: string, method: string = 'GET', body?: any, que
     const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, options);
     if (!response.ok) {
       const error = await response.text();
-      console.warn(`⚠️ Supabase Sync Issue [${table}]:`, error);
+      console.warn(`⚠️ Supabase Issue [${table}]:`, error);
       return null;
     }
     
@@ -87,6 +87,12 @@ export const db = {
     } catch (e) {
       return false;
     }
+  },
+
+  // Consulta directa a la nube para login (solución para mobile)
+  verifyUserCloud: async (email: string): Promise<User | null> => {
+    const data = await cloudFetch('users', 'GET', null, `?email=eq.${email.toLowerCase()}`);
+    return data && data.length > 0 ? data[0] : null;
   },
 
   getUsers: (): User[] => {
