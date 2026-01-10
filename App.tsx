@@ -19,11 +19,12 @@ import AIAnalystView from './pages/Client/AIAnalystView';
 import ProductCostingView from './pages/Client/ProductCostingView';
 import MetaInsightsView from './pages/Client/MetaInsightsView';
 import { Layout } from './components/Layout';
-import { Lock } from 'lucide-react';
+import { Lock, RefreshCw, Sparkles } from 'lucide-react';
 
 interface AuthContextType extends AuthState {
   login: (email: string, pass: string) => Promise<void>;
   logout: () => void;
+  isSyncing: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -40,39 +41,52 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     isAuthenticated: false,
     isLoading: true
   });
+  const [isSyncing, setIsSyncing] = useState(true);
 
   useEffect(() => {
-    db.init();
-    const savedUserStr = localStorage.getItem('mp_session');
-    if (savedUserStr) {
-      try {
-        const savedUser = JSON.parse(savedUserStr);
-        const users = db.getUsers();
-        const freshUser = users.find(u => u.id === savedUser.id);
-        if (freshUser) {
-          setState({ user: freshUser, isAuthenticated: true, isLoading: false });
-        } else {
+    const initApp = async () => {
+      // Sincronizar con la nube antes de cualquier cosa
+      await db.init();
+      setIsSyncing(false);
+
+      const savedUserStr = localStorage.getItem('mp_session');
+      if (savedUserStr) {
+        try {
+          const savedUser = JSON.parse(savedUserStr);
+          const users = db.getUsers();
+          const freshUser = users.find(u => u.id === savedUser.id);
+          if (freshUser) {
+            setState({ user: freshUser, isAuthenticated: true, isLoading: false });
+          } else {
+            localStorage.removeItem('mp_session');
+            setState({ user: null, isAuthenticated: false, isLoading: false });
+          }
+        } catch (e) {
           localStorage.removeItem('mp_session');
           setState({ user: null, isAuthenticated: false, isLoading: false });
         }
-      } catch (e) {
-        localStorage.removeItem('mp_session');
-        setState({ user: null, isAuthenticated: false, isLoading: false });
+      } else {
+        setState(prev => ({ ...prev, isLoading: false }));
       }
-    } else {
-      setState(prev => ({ ...prev, isLoading: false }));
-    }
+    };
+
+    initApp();
   }, []);
 
   const login = async (email: string, pass: string) => {
-    await new Promise(r => setTimeout(r, 600));
-    const users = db.getUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
-    if (user) {
-      localStorage.setItem('mp_session', JSON.stringify(user));
-      setState({ user, isAuthenticated: true, isLoading: false });
-    } else {
-      throw new Error("Credenciales inválidas");
+    setIsSyncing(true);
+    try {
+      await db.syncFromCloud(); // Asegurar que tenemos los últimos usuarios
+      const users = db.getUsers();
+      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
+      if (user) {
+        localStorage.setItem('mp_session', JSON.stringify(user));
+        setState({ user, isAuthenticated: true, isLoading: false });
+      } else {
+        throw new Error("Credenciales inválidas");
+      }
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -82,19 +96,32 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout, isSyncing }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: UserRole[] }> = ({ children, allowedRoles }) => {
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { isAuthenticated, user, isLoading, isSyncing } = useAuth();
   
-  if (isLoading) {
+  if (isLoading || isSyncing) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-10 h-10 border-4 border-[#b10000] border-t-transparent rounded-full animate-spin"></div>
+      <div className="h-screen flex flex-col items-center justify-center bg-[#b10000] space-y-8 p-10 text-white">
+        <div className="flex flex-col items-center leading-[0.7] mb-4 animate-pulse">
+          <span className="text-5xl font-black italic tracking-tighter">La</span>
+          <span className="text-7xl font-black italic tracking-tighter mt-2">Dupla</span>
+        </div>
+        <div className="flex flex-col items-center gap-4">
+           <div className="relative">
+              <RefreshCw size={48} className="animate-spin opacity-30" />
+              <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white" size={20} />
+           </div>
+           <div className="text-center space-y-1">
+              <p className="font-black uppercase tracking-[0.3em] text-[10px]">Conectando con la Nube</p>
+              <p className="text-white/60 text-xs font-medium italic">Sincronizando expedientes técnicos...</p>
+           </div>
+        </div>
       </div>
     );
   }

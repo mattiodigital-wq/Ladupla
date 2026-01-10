@@ -1,6 +1,9 @@
 
 import { Client, User, UserRole, AuditSession, AuditTask, Module, Lesson, UserProgress, AIReport, CostingData } from '../types';
 
+const SUPABASE_URL = 'https://iuuqsuvlhgcnnuosxcal.supabase.co';
+const SUPABASE_KEY = 'sb_secret_Jp-zO7TVbCGYLts9Y2SjYw_ly6vjq9D';
+
 const STORAGE_KEYS = {
   USERS: 'mp_users_v2',
   CLIENTS: 'mp_clients_v2',
@@ -9,88 +12,76 @@ const STORAGE_KEYS = {
   LESSONS: 'mp_lessons_v2',
   PROGRESS: 'mp_progress_v2',
   AI_REPORTS: 'mp_ai_reports_v2',
-  CLOUD_CONFIG: 'mp_cloud_config_v2'
 };
 
-export interface CloudConfig {
-  url: string;
-  key: string;
-  isEnabled: boolean;
-}
-
-// Helper para llamadas a Supabase (REST API)
-const cloudFetch = async (table: string, method: string = 'GET', body?: any) => {
-  const config = db.getCloudConfig();
-  if (!config.isEnabled) return null;
-
+const cloudFetch = async (table: string, method: string = 'GET', body?: any, query: string = '') => {
   const headers = {
-    'apikey': config.key,
-    'Authorization': `Bearer ${config.key}`,
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
     'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
+    'Prefer': method === 'POST' ? 'return=representation,resolution=merge-duplicates' : 'return=representation'
   };
 
-  const url = `${config.url}/rest/v1/${table}`;
-  
   try {
     const options: RequestInit = { method, headers };
     if (body) options.body = JSON.stringify(body);
     
-    // Si es GET y hay body, Supabase lo trata como filtros (aquí simplificado)
-    const response = await fetch(url + (method === 'GET' ? '?select=*' : ''), options);
-    if (!response.ok) throw new Error(await response.text());
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, options);
+    if (!response.ok) {
+      console.warn(`⚠️ Error en tabla ${table}:`, await response.text());
+      return null;
+    }
     return await response.json();
   } catch (e) {
-    console.error(`Cloud Error (${table}):`, e);
+    console.error(`❌ Error de conexión Cloud [${table}]:`, e);
     return null;
   }
 };
 
 export const db = {
-  init: () => {
-    if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([
-        { id: 'u1', email: 'admin@laclinicadelecommerce.com', password: 'admin', name: 'Admin Clínica', role: UserRole.ADMIN, createdAt: new Date().toISOString() },
-        { id: 'u2', email: 'cliente@demo.com', password: 'demo', name: 'Cliente Ejemplo', role: UserRole.CLIENT, clientId: 'c1', createdAt: new Date().toISOString() }
-      ]));
-    }
-    Object.values(STORAGE_KEYS).forEach(key => {
-      if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify([]));
-    });
+  init: async () => {
+    // Sincronización mandatoria al iniciar
+    console.log("🔄 Iniciando Sincronización Maestra...");
+    return await db.syncFromCloud();
   },
 
-  // Gestión de Configuración de Nube
-  getCloudConfig: (): CloudConfig => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CLOUD_CONFIG);
-    return saved ? JSON.parse(saved) : { url: '', key: '', isEnabled: false };
-  },
+  syncFromCloud: async () => {
+    const tableMapping = [
+      { cloud: 'users', local: STORAGE_KEYS.USERS },
+      { cloud: 'clients', local: STORAGE_KEYS.CLIENTS },
+      { cloud: 'sessions', local: STORAGE_KEYS.SESSIONS },
+      { cloud: 'modules', local: STORAGE_KEYS.MODULES },
+      { cloud: 'lessons', local: STORAGE_KEYS.LESSONS },
+      { cloud: 'progress', local: STORAGE_KEYS.PROGRESS },
+      { cloud: 'ai_reports', local: STORAGE_KEYS.AI_REPORTS }
+    ];
 
-  saveCloudConfig: (config: CloudConfig) => {
-    localStorage.setItem(STORAGE_KEYS.CLOUD_CONFIG, JSON.stringify(config));
-  },
-
-  // Sincronización Masiva
-  exportFullBackup: () => {
-    const backup: Record<string, any> = {};
-    Object.entries(STORAGE_KEYS).forEach(([name, key]) => {
-      backup[key] = JSON.parse(localStorage.getItem(key) || '[]');
-    });
-    return JSON.stringify(backup);
-  },
-
-  importFullBackup: (jsonString: string) => {
     try {
-      const backup = JSON.parse(jsonString);
-      Object.entries(backup).forEach(([key, data]) => {
-        localStorage.setItem(key, JSON.stringify(data));
-      });
-      return true;
+      const results = await Promise.all(tableMapping.map(async (item) => {
+        const data = await cloudFetch(item.cloud, 'GET');
+        if (data) {
+          localStorage.setItem(item.local, JSON.stringify(data));
+          return true;
+        }
+        return false;
+      }));
+
+      // Inyectar admin por defecto si la tabla de usuarios está vacía
+      const users = db.getUsers();
+      if (users.length === 0) {
+        const defaultAdmin = { id: 'u1', email: 'admin@laclinicadelecommerce.com', password: 'admin', name: 'Admin Clínica', role: UserRole.ADMIN, createdAt: new Date().toISOString() };
+        await db.saveUser(defaultAdmin);
+      }
+
+      console.log("✅ Sincronización completada.");
+      return results.every(r => r);
     } catch (e) {
+      console.error("❌ Fallo crítico en sincronización:", e);
       return false;
     }
   },
 
-  // Lectura (Prioriza Local por velocidad, pero el Admin debería poder "Refrescar")
+  // GETTERS (Lectura de Caché Local Rápida)
   getUsers: (): User[] => JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]'),
   getClients: (): Client[] => JSON.parse(localStorage.getItem(STORAGE_KEYS.CLIENTS) || '[]'),
   getSessions: (clientId?: string): AuditSession[] => {
@@ -111,19 +102,13 @@ export const db = {
     return all.filter((r: AIReport) => r.clientId === clientId).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
-  // Escritura Híbrida
+  // SETTERS (Escritura Espejo: Local + Cloud)
   saveClient: async (client: Client) => {
     const items = db.getClients();
     const idx = items.findIndex(c => c.id === client.id);
     if (idx > -1) items[idx] = client; else items.push(client);
     localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(items));
-    
-    // Cloud Sync
-    const config = db.getCloudConfig();
-    if (config.isEnabled) {
-      // Intenta un UPSERT en Supabase (requiere tabla 'clients' configurada)
-      await cloudFetch('clients', 'POST', client); 
-    }
+    await cloudFetch('clients', 'POST', client); 
   },
 
   saveUser: async (user: User) => {
@@ -131,58 +116,22 @@ export const db = {
     const idx = items.findIndex(u => u.id === user.id);
     if (idx > -1) items[idx] = user; else items.push(user);
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(items));
-    
-    const config = db.getCloudConfig();
-    if (config.isEnabled) await cloudFetch('users', 'POST', user);
+    await cloudFetch('users', 'POST', user);
   },
 
   saveSession: async (session: AuditSession) => {
-    const items = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || '[]');
-    const idx = items.findIndex((s: any) => s.id === session.id);
+    const items = db.getSessions();
+    const idx = items.findIndex(s => s.id === session.id);
     if (idx > -1) items[idx] = session; else items.push(session);
     localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(items));
-    
-    const config = db.getCloudConfig();
-    if (config.isEnabled) await cloudFetch('sessions', 'POST', session);
-  },
-
-  saveModule: async (module: Module) => {
-    const items = db.getModules();
-    const idx = items.findIndex(m => m.id === module.id);
-    if (idx > -1) items[idx] = module; else items.push(module);
-    localStorage.setItem(STORAGE_KEYS.MODULES, JSON.stringify(items));
-  },
-
-  saveLesson: async (lesson: Lesson) => {
-    const items = db.getLessons();
-    const idx = items.findIndex(l => l.id === lesson.id);
-    if (idx > -1) items[idx] = lesson; else items.push(lesson);
-    localStorage.setItem(STORAGE_KEYS.LESSONS, JSON.stringify(items));
+    await cloudFetch('sessions', 'POST', session);
   },
 
   saveAIReport: async (report: AIReport) => {
     const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.AI_REPORTS) || '[]');
     all.push(report);
     localStorage.setItem(STORAGE_KEYS.AI_REPORTS, JSON.stringify(all));
-  },
-
-  // Fix: Added markReportsAsRead to update reports read status for a client
-  markReportsAsRead: (clientId: string) => {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.AI_REPORTS) || '[]');
-    const updated = all.map((r: AIReport) => 
-      r.clientId === clientId ? { ...r, isReadByClient: true } : r
-    );
-    localStorage.setItem(STORAGE_KEYS.AI_REPORTS, JSON.stringify(updated));
-  },
-
-  // Fix: Added saveCostingData to persist product costing data for a client
-  saveCostingData: async (clientId: string, costingData: CostingData) => {
-    const clients = db.getClients();
-    const idx = clients.findIndex(c => c.id === clientId);
-    if (idx > -1) {
-      clients[idx].costingData = costingData;
-      await db.saveClient(clients[idx]);
-    }
+    await cloudFetch('ai_reports', 'POST', report);
   },
 
   updateProgress: async (progress: UserProgress) => {
@@ -190,31 +139,71 @@ export const db = {
     const idx = items.findIndex(p => p.userId === progress.userId && p.lessonId === progress.lessonId);
     if (idx > -1) items[idx] = progress; else items.push(progress);
     localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(items));
+    await cloudFetch('progress', 'POST', progress);
   },
 
-  toggleTask: (sessionId: string, taskId: string) => {
-    const sessions = db.getSessions();
-    const sIdx = sessions.findIndex(s => s.id === sessionId);
-    if (sIdx > -1) {
-      const tIdx = sessions[sIdx].tasks.findIndex(t => t.id === taskId);
-      if (tIdx > -1) {
-        sessions[sIdx].tasks[tIdx].isCompleted = !sessions[sIdx].tasks[tIdx].isCompleted;
-        localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
+  deleteClient: async (id: string) => {
+    const items = db.getClients().filter(c => c.id !== id);
+    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(items));
+    await cloudFetch('clients', 'DELETE', null, `?id=eq.${id}`);
+  },
+
+  deleteSession: async (id: string) => {
+    const items = db.getSessions().filter(s => s.id !== id);
+    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(items));
+    await cloudFetch('sessions', 'DELETE', null, `?id=eq.${id}`);
+  },
+
+  deleteUser: async (id: string) => {
+    const items = db.getUsers().filter(u => u.id !== id);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(items));
+    await cloudFetch('users', 'DELETE', null, `?id=eq.${id}`);
+  },
+
+  toggleTask: async (sessionId: string, taskId: string) => {
+    const items = db.getSessions();
+    const session = items.find(s => s.id === sessionId);
+    if (session) {
+      const task = session.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.isCompleted = !task.isCompleted;
+        await db.saveSession(session);
       }
     }
   },
 
-  deleteUser: (id: string) => {
-    const items = db.getUsers().filter(u => u.id !== id);
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(items));
+  saveModule: async (module: Module) => {
+    const items = db.getModules();
+    const idx = items.findIndex(m => m.id === module.id);
+    if (idx > -1) items[idx] = module; else items.push(module);
+    localStorage.setItem(STORAGE_KEYS.MODULES, JSON.stringify(items));
+    await cloudFetch('modules', 'POST', module);
   },
-  deleteClient: (id: string) => {
-    const items = db.getClients().filter(c => c.id !== id);
-    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(items));
+
+  saveLesson: async (lesson: Lesson) => {
+    const items = JSON.parse(localStorage.getItem(STORAGE_KEYS.LESSONS) || '[]');
+    const idx = items.findIndex((l: any) => l.id === lesson.id);
+    if (idx > -1) items[idx] = lesson; else items.push(lesson);
+    localStorage.setItem(STORAGE_KEYS.LESSONS, JSON.stringify(items));
+    await cloudFetch('lessons', 'POST', lesson);
   },
-  deleteSession: (id: string) => {
-    const items = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || '[]');
-    const filtered = items.filter((s: any) => s.id !== id);
-    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(filtered));
+
+  markReportsAsRead: async (clientId: string) => {
+    const all = db.getAIReports(clientId);
+    const unread = all.filter(r => !r.isReadByClient);
+    if (unread.length > 0) {
+      const updated = unread.map(r => ({ ...r, isReadByClient: true }));
+      await cloudFetch('ai_reports', 'POST', updated);
+      await db.syncFromCloud();
+    }
+  },
+
+  saveCostingData: async (clientId: string, data: CostingData) => {
+    const clients = db.getClients();
+    const client = clients.find(c => c.id === clientId);
+    if (client) {
+      client.costingData = data;
+      await db.saveClient(client);
+    }
   }
 };
