@@ -17,9 +17,17 @@ import {
   Bot,
   Calculator,
   Facebook,
-  RefreshCw
+  RefreshCw,
+  CloudCheck
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+
+const CloudCheckIcon = ({ size }: { size: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
+    <path d="M17.5 19a3.5 3.5 0 0 0 0-7c-.3 0-.6 0-.8.1a5 5 0 1 0-8.9 3.2" />
+    <polyline points="9 16 11 18 15 14" />
+  </svg>
+);
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
@@ -91,45 +99,22 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </div>
             ) : (
               <div className="space-y-8">
+                {/* Menú Cliente */}
                 <div className="space-y-1">
                   <p className="px-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Tratamiento Técnico</p>
-                  <Link
-                    to="/"
-                    className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${
-                      currentPath === '/' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
+                  <Link to="/" className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${currentPath === '/' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'}`} onClick={() => setIsSidebarOpen(false)}>
                     <LayoutDashboard size={20} />
                     <span className="font-bold text-sm">Estado General</span>
                   </Link>
-                  <Link
-                    to="/meta-insights"
-                    className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${
-                      currentPath === '/meta-insights' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
+                  <Link to="/meta-insights" className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${currentPath === '/meta-insights' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'}`} onClick={() => setIsSidebarOpen(false)}>
                     <Facebook size={20} />
                     <span className="font-bold text-sm">Meta Insights</span>
                   </Link>
-                  <Link
-                    to="/profitability"
-                    className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${
-                      currentPath === '/profitability' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
+                  <Link to="/profitability" className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${currentPath === '/profitability' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'}`} onClick={() => setIsSidebarOpen(false)}>
                     <Calculator size={20} />
                     <span className="font-bold text-sm">Rentabilidad</span>
                   </Link>
-                  <Link
-                    to="/ai-analyst"
-                    className={`relative flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${
-                      currentPath === '/ai-analyst' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
+                  <Link to="/ai-analyst" className={`relative flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${currentPath === '/ai-analyst' ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'}`} onClick={() => setIsSidebarOpen(false)}>
                     <Bot size={20} />
                     <span className="font-bold text-sm">Informes IA</span>
                     {unreadAI > 0 && (
@@ -138,48 +123,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                       </span>
                     )}
                   </Link>
-                  <Link
-                    to="/training"
-                    className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${
-                      currentPath.startsWith('/training') ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
+                  <Link to="/training" className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all ${currentPath.startsWith('/training') ? 'bg-[#b10000] text-white shadow-xl shadow-red-100' : 'text-gray-500 hover:bg-gray-50'}`} onClick={() => setIsSidebarOpen(false)}>
                     <BookOpen size={20} />
                     <span className="font-bold text-sm">Academia Dupla</span>
                   </Link>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="px-4 flex items-center justify-between mb-4">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Encuentros</p>
-                    <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full font-black">{clientSessions.length}</span>
-                  </div>
-                  <div className="space-y-1 overflow-y-auto max-h-[200px] no-scrollbar">
-                    {clientSessions.map(session => (
-                      <Link
-                        key={session.id}
-                        to={`/session/${session.id}`}
-                        className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                          currentPath === `/session/${session.id}` ? 'bg-red-50 text-[#b10000]' : 'text-gray-500 hover:bg-gray-50'
-                        }`}
-                        onClick={() => setIsSidebarOpen(false)}
-                      >
-                        <MessageCircle size={18} className={currentPath === `/session/${session.id}` ? 'text-[#b10000]' : 'text-gray-400'} />
-                        <div className="flex-1 overflow-hidden">
-                          <p className="font-bold text-sm truncate">{session.title}</p>
-                          <p className="text-[10px] font-medium opacity-60">{new Date(session.date).toLocaleDateString()}</p>
-                        </div>
-                        <ChevronRight size={14} className={`opacity-0 group-hover:opacity-100 transition-opacity ${currentPath === `/session/${session.id}` ? 'opacity-100' : ''}`} />
-                      </Link>
-                    ))}
-                  </div>
                 </div>
               </div>
             )}
           </nav>
 
           <div className="p-4 border-t space-y-4 bg-gray-50/50">
+            <div className="flex items-center justify-center gap-2 mb-2">
+               <CloudCheckIcon size={14} />
+               <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Nube Sincronizada</span>
+            </div>
             <div className="bg-white rounded-3xl p-4 flex items-center gap-3 border border-gray-100 shadow-sm">
               <div className="w-10 h-10 rounded-full bg-[#b10000] flex items-center justify-center text-white font-black shadow-lg">
                 {user?.name.charAt(0)}
